@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.name }} | {{ site.description }}</title>
+
+    {% include meta.html %}
+    <meta property="og:image" content="http://sauravchandra.com/images/photo.jpg"/>
+    <meta property="og:site_name" content="Saurav Chandra"/>
+    <meta property="og:url" content="http://sauravchandra.com"/>
+    {% include analytics.html %}
+    
+    <link rel="stylesheet" type="text/css" href="../style-dev.css"/>
+    <link href="https://fonts.googleapis.com/css?family=Quicksand" rel="stylesheet" />
+    <link rel="icon" href="../favicon.ico" type="image/x-icon"/>
+  </head>
+  
+  <body id="home">
+    {% include home-header.html%}
+    <div class="content">
+        {{ content }}
+    </div>
+  </body>
+</html>
