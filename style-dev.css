@@ -348,16 +348,16 @@ button.menu-arrow{
 	text-align: center;
 }
 #music{
-	background:url(images/music-bg.jpg) center no-repeat fixed;
+	background:url(images/music-bg.jpg) center no-repeat;
 	background-size:cover;
 	
 }
 #books{
-	background:url(images/book-bg.jpg) center no-repeat fixed;
+	background:url(images/book-bg.jpg) center no-repeat;
 	background-size:cover;
 }
 #work{
-	background:url(images/work-bg.jpg) center no-repeat fixed;
+	background:url(images/work-bg.jpg) center no-repeat;
 	background-size:cover;
 }
 
