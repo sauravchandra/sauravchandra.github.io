@@ -1,0 +1,20 @@
+---
+layout: live
+permalink: /live/
+track-id: 16077756
+book-isbn: 9780679760801
+---
+
+<div class="live-container">
+	<div class="live-items" id="music">
+		<div class="live-label">What am I listening to?</div>
+		<iframe width="300px" height="300px" style="margin:auto;" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/{{ page.track-id }}&amp;auto_play=false&amp;hide_related=false&amp;show_comments=false&amp;show_user=false&amp;show_reposts=false&amp;visual=true"></iframe>	
+	</div>
+	<div class="live-items" id="books">
+		<div class="live-label">What am I reading?</div>
+		<div id="book-container" style="margin:auto;"><a href="https://www.goodreads.com/search?q=9780679760801&format=json&key=yCNNXMBDBBU7FLDq6ivLg"><img src="https://covers.openlibrary.org/b/isbn/{{page.book-isbn}}-L.jpg"/></a></div>
+	</div>
+	<div class="live-items" id="work">
+		<div class="live-label">What am I working on?</div>
+	</div>
+</div>

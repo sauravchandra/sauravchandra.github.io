@@ -1,0 +1,21 @@
+---
+title: Blog
+layout: blog
+permalink: /blog/
+---
+<div id="blog-post-display-container">
+	{% for post in site.posts %}
+	<div> 
+		<div id="blog-post-main-image"><img src="../images/{{ post.banner }}"/></div>
+		<h1 id="blog-post-title"><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h1>
+		<div style="font-size:14px;">
+				 Posted on {{ post.date | date: "%B %e, %Y" }} | {{post.tags}}
+		</div>
+		<div>
+			{{ post.excerpt }}
+		</div>
+	</div>
+	<hr>
+	{% endfor %}
+</div>
+{% include footer.html %}

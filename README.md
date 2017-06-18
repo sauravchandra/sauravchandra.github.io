@@ -1,2 +1,1 @@
-# sauravchandra.github.io
-Personal Website
+This repository houses the files of my website.
