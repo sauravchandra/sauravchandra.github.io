@@ -1,0 +1,27 @@
+<header id="post">
+	<a href="../blog/" style="padding:0;margin-left:10px;">
+		<button class="menu-arrow menu-arrow-left">
+			<span class="icon"></span>
+		</button>
+	</a>
+	<button class="hamburger hamburger-cancel">
+   		<span class="icon"></span>		
+	</button> 
+</header>
+<div id="overlay">
+	<a href="../">Home</a>
+	<a href="../blog/">Blog</a>
+	<a href="../live/" style="margin-right:30px;"><img height="20px" width="20px" src="../images/reddot.png"> Live</a>
+</div>
+ <script>
+ 	var element=document.getElementById('overlay'),style = window.getComputedStyle(element);
+	var el = document.querySelectorAll('.hamburger');	
+ 		for(i=0; i<=el.length; i++) {
+ 			el[i].addEventListener('click', function() {
+ 		    	this.classList.toggle('active');
+			var height = style.getPropertyValue('height');
+			if(height=='0px'){element.style.height='100%';}
+			else{element.style.height='0px';}
+			}, false);
+ 		}
+ </script>
