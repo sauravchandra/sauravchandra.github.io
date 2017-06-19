@@ -9,6 +9,7 @@ html,body{
 	background-size:  cover;
 	font-family: 'Quicksand', sans-serif;
         color: #ffffff;	
+	display:flex;
 }
 #blog{
 	font-family: 'Quicksand', sans-serif;
@@ -83,7 +84,7 @@ header#home{
 .content {
     	display: flex;
     	flex-direction: column;
-	margin-top:100px;
+	margin:auto;
 }
 .blog-content {
     position: relative;
