@@ -81,11 +81,9 @@ header#home{
 }
 
 .content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
+    	display: flex;
+    	flex-direction: column;
+	margin-top:100px;
 }
 .blog-content {
     position: relative;
@@ -118,8 +116,11 @@ header#home{
   	user-select: none
 }
 #description{
-		font-size: 30px;
-    		text-align: center;
+	font-size: 25px;
+    	text-align: center;
+    	width: 100%;
+    	margin: 0 auto;
+    	max-width: 800px;
 }
 #links{
     padding: 20px;
