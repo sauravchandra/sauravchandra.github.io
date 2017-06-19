@@ -2,25 +2,21 @@
 <html>
   <head>
     <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.name }}</title>
-
     <meta charset="utf-8" />
     <meta name="google-site-verification" content="5RPtXkTCO395ZNWDdtWJFXxU1vqSdx7NDEW3yKBpoDM" />
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>    
-
-
-
-    {% include analytics.html %}
-    <meta property="og:image" content="../images/{{ page.banner }}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta property="og:image" content="/images/{{ page.banner }}"/>
     <meta property="og:title" content="{{ page.title }}"/>
     <meta property="og:url" content="{{ site.baseurl }}{{ post.url }}"/>
     <meta property="og:site_name" content="{{ site.name }}"/>
-
-    <link rel="stylesheet" type="text/css" href="../style-dev.css" />
-    <link href="https://fonts.googleapis.com/css?family=Quicksand|Ultra" rel="stylesheet" />    <link rel="icon" href="../favicon.ico" type="image/x-icon"/>
+    {% include analytics.html %}
+    <link rel="stylesheet" type="text/css" href="/style-dev.css" />
+    <link href="https://fonts.googleapis.com/css?family=Quicksand|Ultra" rel="stylesheet" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon"/>
   </head>
 
   <body id="blog">
-    <div id="post-banner" style="background-image:url(../images/{{page.banner}});">
+    <div id="post-banner" style="background-image:url(/images/{{page.banner}});">
          {% include post-header.html %}
       <div id="post-title">{{ page.title }}</div>
       <div id="post-meta">Posted on {{ page.date | date: "%B %e, %Y" }} by <b>{{ page.author }}</b></div>
