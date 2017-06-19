@@ -9,7 +9,7 @@ permalink: /blog/
 		<div id="blog-post-main-image"><img src="../images/{{ post.banner }}"/></div>
 		<h1 id="blog-post-title"><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h1>
 		<div style="font-size:14px;">
-				 Posted on {{ post.date | date: "%B %e, %Y" }} | {{post.tags}}
+				 Posted on {{ post.date | date: "%B %e, %Y" }} | {{post.categories}}
 		</div>
 		<div>
 			{{ post.excerpt }}
