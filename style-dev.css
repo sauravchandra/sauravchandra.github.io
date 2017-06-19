@@ -119,9 +119,9 @@ header#home{
 #description{
 	font-size: 25px;
     	text-align: center;
-    	width: 100%;
+    	padding: 20px;
     	margin: 0 auto;
-    	max-width: 800px;
+    	max-width: 750px;
 }
 #links{
     padding: 20px;
