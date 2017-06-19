@@ -2,6 +2,7 @@
 layout: post
 title: That Day in School
 tags: life
+category:life
 banner: her-eyes.jpg
 author: Saurav Chandra
 ---
