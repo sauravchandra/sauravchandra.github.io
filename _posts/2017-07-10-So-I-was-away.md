@@ -1,8 +1,8 @@
 ---
 layout: post
-title: So I was away
+title: So I was Away
 banner: life-alone.jpg
-tags: life
+categories: life
 author: Saurav Chandra
 published : false
 ---
