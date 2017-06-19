@@ -468,4 +468,4 @@ hr{
     height: 42px;
     background-position: -681px -5px
 }
-svg{display:none;}
+.logo{display:none !important;}
