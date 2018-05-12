@@ -4,7 +4,7 @@ title: That Day in School
 categories: life
 banner: her-eyes.jpg
 author: Saurav Chandra
-published:false
+published: false
 ---
 The class broke into a murmur as she walked into ‘Class 5A’ along-side with Miss Diana, our English teacher, and stood on the classroom doorway, in her brilliantly dazzling new school uniform, with a red water bottle in her hand, curiously gazing at us.
 
