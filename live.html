@@ -1,0 +1,21 @@
+---
+layout: live
+permalink: /live/
+track-id: 100612538
+book-isbn: 9780140385724
+work-desc: Raspberry Pi based home automation system
+---
+<div class="live-container">
+	<div class="live-items" id="music">
+		<div class="live-label">What am I listening to?</div>
+		<iframe width="300px" height="300px" style="margin:auto;" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/{{ page.track-id }}&amp;auto_play=false&amp;hide_related=false&amp;show_comments=false&amp;show_user=false&amp;show_reposts=false&amp;visual=true"></iframe>	
+	</div>
+	<div class="live-items" id="books">
+		<div class="live-label">What am I reading?</div>
+		<div id="book-container"><a href="https://www.goodreads.com/search?q={{page.book-isbn}}&format=json&key=yCNNXMBDBBU7FLDq6ivLg"><img src="https://covers.openlibrary.org/b/isbn/{{page.book-isbn}}-L.jpg"/></a></div>
+	</div>
+	<div class="live-items" id="work">
+		<div class="live-label">What am I working on?</div>
+		<div id="work-container">{{page.work-desc}}<br></div>
+	</div>
+</div>
