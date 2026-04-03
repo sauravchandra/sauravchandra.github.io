@@ -1,0 +1,109 @@
+---
+export interface FeedItem {
+  title: string;
+  description?: string;
+  date: Date;
+  world: string;
+  source: string;
+  url: string;
+  external: boolean;
+  image?: string;
+  meta?: Record<string, any>;
+}
+
+interface Props {
+  item: FeedItem;
+}
+
+const { item } = Astro.props;
+
+const worldLabels: Record<string, string> = {
+  tech: 'Tech', film: 'Film', music: 'Music', philosophy: 'Philosophy', travel: 'Travel',
+};
+
+const sourceLabels: Record<string, string> = {
+  post: '', youtube: 'YouTube', letterboxd: 'Letterboxd',
+  substack: 'Substack', medium: 'Medium', github: 'GitHub',
+  soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Photos',
+};
+
+const dateStr = item.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+function starString(rating: number): string {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  return '\u2605'.repeat(full) + (half ? '\u00BD' : '');
+}
+
+const langColors: Record<string, string> = {
+  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
+  Go: '#00ADD8', Rust: '#dea584', Java: '#b07219', HTML: '#e34c26',
+  CSS: '#563d7c', Shell: '#89e051', Ruby: '#701516', C: '#555555',
+};
+---
+
+<a
+  href={item.url}
+  class:list={['feed-card', 'animate-in', `feed-card--${item.source}`]}
+  data-world={item.world}
+  target={item.external ? '_blank' : undefined}
+  rel={item.external ? 'noopener noreferrer' : undefined}
+>
+  {(item.source === 'youtube' || item.source === 'gallery') && item.image && (
+    <div class="feed-card-thumb">
+      <img src={item.image} alt={item.title} loading="lazy" />
+    </div>
+  )}
+
+  <div class="feed-card-body">
+    <div class="feed-card-meta">
+      <span class="feed-world" style={`--accent: var(--${item.world})`}>
+        {worldLabels[item.world] || item.world}
+      </span>
+      {sourceLabels[item.source] && (
+        <span class="feed-source">{sourceLabels[item.source]}</span>
+      )}
+      <time>{dateStr}</time>
+      {item.external && (
+        <svg class="feed-external" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M6 2H2v12h12v-4M10 2h4v4M7 9l7-7"/>
+        </svg>
+      )}
+    </div>
+
+    {item.source === 'letterboxd' ? (
+      <h2>
+        {item.title}
+        {item.meta?.rating && <span class="feed-rating">{starString(item.meta.rating)}</span>}
+      </h2>
+    ) : item.source === 'github' ? (
+      <h2>
+        {item.title}
+        {item.meta?.language && (
+          <span class="feed-lang">
+            <span class="feed-lang-dot" style={`background: ${langColors[item.meta.language] || '#888'}`}></span>
+            {item.meta.language}
+          </span>
+        )}
+        {item.meta?.stars > 0 && <span class="feed-stars">{'\u2606'} {item.meta.stars}</span>}
+      </h2>
+    ) : (
+      <h2>{item.title}</h2>
+    )}
+
+    {item.description && <p>{item.description}</p>}
+
+    {item.source === 'spotify' && item.meta?.embedUrl && (
+      <div class="feed-spotify-embed">
+        <iframe
+          src={item.meta.embedUrl}
+          width="100%"
+          height="152"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+          style="border-radius: 12px; border: 0;"
+        />
+      </div>
+    )}
+  </div>
+</a>

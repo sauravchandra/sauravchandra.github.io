@@ -1,0 +1,226 @@
+---
+import { getCollection } from 'astro:content';
+
+const imageSlides = await getCollection('carousel');
+const videoSlides = await getCollection('youtube');
+
+type Slide = {
+  type: 'image' | 'video';
+  caption: string;
+  date: Date;
+  image?: string;
+  videoId?: string;
+};
+
+const allSlides: Slide[] = [
+  ...imageSlides.map(s => ({
+    type: 'image' as const,
+    caption: s.data.caption,
+    date: s.data.date,
+    image: s.data.image,
+  })),
+  ...videoSlides.map(v => ({
+    type: 'video' as const,
+    caption: v.data.caption,
+    date: v.data.date,
+    image: v.data.thumbnail,
+    videoId: v.data.videoId,
+  })),
+].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+function ytUrl(videoId: string) {
+  const params = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    controls: '0',
+    loop: '1',
+    playlist: videoId,
+    playsinline: '1',
+    rel: '0',
+    showinfo: '0',
+    modestbranding: '1',
+    disablekb: '1',
+    iv_load_policy: '3',
+    enablejsapi: '1',
+    vq: 'hd1080',
+  });
+  return `https://www.youtube.com/embed/${videoId}?${params}`;
+}
+---
+
+{allSlides.length > 0 && (
+  <div class="carousel" id="carousel">
+    <div class="carousel-track" id="carouselTrack">
+      {allSlides.map((slide, i) => (
+        <div class="carousel-slide" data-type={slide.type}>
+          {slide.type === 'video' && slide.videoId ? (
+            <div class="carousel-video">
+              <iframe
+                data-src={ytUrl(slide.videoId)}
+                src={i === 0 ? ytUrl(slide.videoId) : ''}
+                allow="autoplay; encrypted-media"
+                allowfullscreen
+              />
+            </div>
+          ) : (
+            <img src={slide.image} alt={slide.caption} loading={i === 0 ? 'eager' : 'lazy'} />
+          )}
+          <div class="carousel-caption">
+            <p>{slide.caption}</p>
+            <div class="carousel-caption-meta">
+              <time>{slide.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</time>
+              {slide.type === 'video' && slide.videoId && (
+                <a href={`https://youtube.com/watch?v=${slide.videoId}`} target="_blank" rel="noopener noreferrer" class="carousel-watch">
+                  Watch on YouTube &rarr;
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <button class="carousel-mute" id="carouselMute" aria-label="Unmute">
+      <svg id="iconMuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+        <line x1="23" y1="9" x2="17" y2="15"/>
+        <line x1="17" y1="9" x2="23" y2="15"/>
+      </svg>
+      <svg id="iconUnmuted" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+        <path d="M15.54 8.46a5 5 0 010 7.07"/>
+        <path d="M19.07 4.93a10 10 0 010 14.14"/>
+      </svg>
+    </button>
+
+    {allSlides.length > 1 && (
+      <>
+        <button class="carousel-btn carousel-prev" id="carouselPrev" aria-label="Previous">&larr;</button>
+        <button class="carousel-btn carousel-next" id="carouselNext" aria-label="Next">&rarr;</button>
+        <div class="carousel-dots" id="carouselDots">
+          {allSlides.map((_, i) => (
+            <button class:list={['carousel-dot', { active: i === 0 }]} data-index={i} aria-label={`Slide ${i + 1}`} />
+          ))}
+        </div>
+      </>
+    )}
+  </div>
+)}
+
+<script>
+  const track = document.getElementById('carouselTrack');
+  const slideEls = document.querySelectorAll('.carousel-slide');
+  const muteBtn = document.getElementById('carouselMute');
+  const iconMuted = document.getElementById('iconMuted');
+  const iconUnmuted = document.getElementById('iconUnmuted');
+
+  const carouselEl = document.getElementById('carousel');
+
+  if (track && slideEls.length > 0 && carouselEl) {
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+    const dots = document.querySelectorAll('.carousel-dot');
+    let current = 0;
+    let muted = true;
+    const total = slideEls.length;
+    let hideTimer: ReturnType<typeof setTimeout>;
+
+    function showControls() {
+      carouselEl!.classList.remove('controls-hidden');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        carouselEl!.classList.add('controls-hidden');
+      }, 3000);
+    }
+
+    carouselEl.addEventListener('mousemove', showControls);
+    carouselEl.addEventListener('touchstart', showControls, { passive: true });
+    carouselEl.addEventListener('mouseleave', () => {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        carouselEl!.classList.add('controls-hidden');
+      }, 800);
+    });
+
+    function updateMuteIcon() {
+      if (!iconMuted || !iconUnmuted) return;
+      iconMuted.style.display = muted ? 'block' : 'none';
+      iconUnmuted.style.display = muted ? 'none' : 'block';
+      muteBtn?.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    }
+
+    function sendYtCommand(iframe: HTMLIFrameElement, func: string) {
+      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func }), '*');
+    }
+
+    function syncVideos() {
+      let hasVideo = false;
+      slideEls.forEach((slide, i) => {
+        const iframe = slide.querySelector('iframe') as HTMLIFrameElement | null;
+        if (!iframe) return;
+        const realSrc = iframe.dataset.src || '';
+        if (i === current) {
+          hasVideo = true;
+          if (!iframe.src || iframe.src === 'about:blank' || iframe.src !== realSrc) {
+            iframe.src = realSrc;
+          }
+        } else {
+          if (iframe.src && iframe.src !== 'about:blank') {
+            iframe.src = '';
+          }
+        }
+      });
+
+      if (muteBtn) {
+        muteBtn.style.display = hasVideo ? 'flex' : 'none';
+      }
+
+      muted = true;
+      updateMuteIcon();
+    }
+
+    function goTo(index: number) {
+      current = ((index % total) + total) % total;
+      track!.style.transform = `translateX(-${current * 100}%)`;
+      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+      syncVideos();
+    }
+
+    muteBtn?.addEventListener('click', () => {
+      const slide = slideEls[current];
+      const iframe = slide?.querySelector('iframe') as HTMLIFrameElement | null;
+      if (!iframe) return;
+      muted = !muted;
+      sendYtCommand(iframe, muted ? 'mute' : 'unMute');
+      updateMuteIcon();
+    });
+
+    prevBtn?.addEventListener('click', () => goTo(current - 1));
+    nextBtn?.addEventListener('click', () => goTo(current + 1));
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => goTo(Number((dot as HTMLElement).dataset.index)));
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') goTo(current - 1);
+      if (e.key === 'ArrowRight') goTo(current + 1);
+    });
+
+    let touchStartX = 0;
+    track.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) goTo(current + (diff > 0 ? 1 : -1));
+    });
+
+    syncVideos();
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      carouselEl!.classList.add('controls-hidden');
+    }, 5000);
+  }
+</script>

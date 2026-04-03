@@ -1,0 +1,52 @@
+---
+const worlds = [
+  { name: 'Tech', slug: 'tech' },
+  { name: 'Film', slug: 'film' },
+  { name: 'Music', slug: 'music' },
+  { name: 'Philosophy', slug: 'philosophy' },
+  { name: 'Travel', slug: 'travel' },
+];
+---
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a href="/" class="nav-logo">Saurav Chandra</a>
+    <nav class="nav-links" id="navLinks">
+      {worlds.map(w => (
+        <a href={`/#${w.slug}`} data-filter={w.slug}>{w.name}</a>
+      ))}
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById('navToggle');
+  const links = document.getElementById('navLinks');
+
+  toggle?.addEventListener('click', () => {
+    toggle.classList.toggle('active');
+    links?.classList.toggle('active');
+    document.body.style.overflow = links?.classList.contains('active') ? 'hidden' : '';
+  });
+
+  document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      toggle?.classList.remove('active');
+      links?.classList.remove('active');
+      document.body.style.overflow = '';
+
+      const filter = (link as HTMLElement).dataset.filter;
+      if (filter && window.location.pathname === '/') {
+        e.preventDefault();
+        const btn = document.querySelector<HTMLButtonElement>(`.filter-btn[data-filter="${filter}"]`);
+        btn?.click();
+        document.querySelector('.feed')?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script>

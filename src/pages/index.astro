@@ -1,0 +1,151 @@
+---
+import Base from '../layouts/Base.astro';
+import Carousel from '../components/Carousel.astro';
+import FeedCard from '../components/FeedCard.astro';
+import type { FeedItem } from '../components/FeedCard.astro';
+import { getCollection } from 'astro:content';
+
+const feed: FeedItem[] = [];
+
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+for (const p of allPosts) {
+  feed.push({
+    title: p.data.title, description: p.data.description,
+    date: p.data.date, world: p.data.world, source: 'post',
+    url: `/${p.id}/`, external: false, image: p.data.cover,
+  });
+}
+
+const ytVideos = await getCollection('youtube');
+for (const v of ytVideos) {
+  feed.push({
+    title: v.data.caption, date: v.data.date, world: 'film',
+    source: 'youtube', url: `https://youtube.com/watch?v=${v.data.videoId}`,
+    external: true, image: v.data.thumbnail,
+  });
+}
+
+const lbEntries = await getCollection('letterboxd');
+for (const lb of lbEntries) {
+  feed.push({
+    title: lb.data.filmTitle, description: lb.data.review,
+    date: lb.data.date, world: 'film', source: 'letterboxd',
+    url: lb.data.url, external: true, image: lb.data.poster,
+    meta: { rating: lb.data.rating },
+  });
+}
+
+const ssEntries = await getCollection('substackFeed');
+for (const s of ssEntries) {
+  feed.push({
+    title: s.data.title, description: s.data.excerpt,
+    date: s.data.date, world: 'philosophy', source: 'substack',
+    url: s.data.url, external: true,
+  });
+}
+
+const mdEntries = await getCollection('mediumFeed');
+for (const m of mdEntries) {
+  feed.push({
+    title: m.data.title, description: m.data.excerpt,
+    date: m.data.date, world: 'philosophy', source: 'medium',
+    url: m.data.url, external: true,
+  });
+}
+
+const ghRepos = await getCollection('github');
+for (const r of ghRepos) {
+  feed.push({
+    title: r.data.name, description: r.data.description,
+    date: r.data.date, world: 'tech', source: 'github',
+    url: r.data.url, external: true,
+    meta: { language: r.data.language, stars: r.data.stars },
+  });
+}
+
+const scTracks = await getCollection('soundcloud');
+for (const t of scTracks) {
+  feed.push({
+    title: t.data.trackTitle, date: t.data.date, world: 'music',
+    source: 'soundcloud', url: t.data.url, external: true,
+    image: t.data.artwork,
+  });
+}
+
+const spEntries = await getCollection('spotify');
+for (const sp of spEntries) {
+  feed.push({
+    title: sp.data.name, date: new Date(), world: 'music',
+    source: 'spotify', url: sp.data.url, external: true,
+    image: sp.data.image,
+    meta: { embedUrl: sp.data.embedUrl, tracks: sp.data.tracks },
+  });
+}
+
+const galEntries = await getCollection('gallery');
+for (const g of galEntries) {
+  feed.push({
+    title: g.data.title, description: g.data.location,
+    date: g.data.date, world: 'travel', source: 'gallery',
+    url: `/gallery/${g.id}/`, external: false, image: g.data.cover,
+  });
+}
+
+feed.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+const worlds = ['tech', 'film', 'music', 'philosophy', 'travel'];
+const worldLabels: Record<string, string> = {
+  tech: 'Tech', film: 'Film', music: 'Music', philosophy: 'Philosophy', travel: 'Travel',
+};
+const worldColors: Record<string, string> = {
+  tech: 'var(--tech)', film: 'var(--film)', music: 'var(--music)',
+  philosophy: 'var(--philosophy)', travel: 'var(--travel)',
+};
+---
+
+<Base>
+  <Carousel />
+
+  <section class="feed">
+    <div class="container">
+      <nav class="feed-filters" id="feedFilters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        {worlds.map((w) => (
+          <button class="filter-btn" data-filter={w} style={`--accent: ${worldColors[w]}`}>
+            {worldLabels[w]}
+          </button>
+        ))}
+      </nav>
+
+      <div class="feed-list" id="feedList">
+        {feed.map((item) => <FeedCard item={item} />)}
+      </div>
+
+      <p class="empty" id="feedEmpty" style="display: none;">Nothing here yet.</p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
+  const cards = document.querySelectorAll<HTMLElement>('.feed-card');
+  const empty = document.getElementById('feedEmpty');
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const filter = btn.dataset.filter;
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const show = filter === 'all' || card.dataset.world === filter;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      if (empty) empty.style.display = visible === 0 ? '' : 'none';
+    });
+  });
+</script>
