@@ -9,6 +9,7 @@ const CONFIG = {
   medium: 'sauravchandra123',
   github: 'sauravchandra',
   soundcloud: '19843180',
+  spotify: 'sauravchandra',
 };
 
 const worlds = ['tech', 'film', 'music', 'philosophy', 'travel'] as const;
@@ -62,52 +63,88 @@ const gallery = defineCollection({
   }),
 });
 
-const spotify = defineCollection({
-  loader: async () => {
-    const clientId = process.env.SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    if (!clientId || !clientSecret) return [];
-    try {
-      const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-        },
-        body: 'grant_type=client_credentials',
-      });
-      if (!tokenRes.ok) return [];
-      const { access_token } = await tokenRes.json() as any;
+async function fetchSpotifyViaAPI(): Promise<any[] | null> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  try {
+    const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: 'grant_type=client_credentials',
+    });
+    if (!tokenRes.ok) return null;
+    const { access_token } = await tokenRes.json() as any;
 
-      const plRes = await fetch(
-        'https://api.spotify.com/v1/users/sauravchandra/playlists?limit=50',
-        { headers: { Authorization: `Bearer ${access_token}` } }
-      );
-      if (!plRes.ok) return [];
-      const data = await plRes.json() as any;
-
-      return (data.items || [])
-        .filter((p: any) => p.public)
-        .map((p: any) => ({
+    const all: any[] = [];
+    let url: string | null = `https://api.spotify.com/v1/users/${CONFIG.spotify}/playlists?limit=50`;
+    while (url) {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${access_token}` } });
+      if (!res.ok) return null;
+      const page = await res.json() as any;
+      for (const p of (page.items || [])) {
+        if (!p.public) continue;
+        all.push({
           id: p.id,
           name: p.name,
-          description: (p.description || '').replace(/<[^>]+>/g, '').slice(0, 150),
           url: p.external_urls?.spotify || '',
           embedUrl: `https://open.spotify.com/embed/playlist/${p.id}`,
           image: p.images?.[0]?.url || '',
-          tracks: p.tracks?.total || 0,
-          date: p.id,
-        }));
-    } catch { return []; }
+        });
+      }
+      url = page.next;
+    }
+    return all.length ? all : null;
+  } catch { return null; }
+}
+
+async function fetchSpotifyViaScrape(): Promise<any[]> {
+  try {
+    const res = await fetch(`https://open.spotify.com/user/${CONFIG.spotify}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+    const scripts = [...html.matchAll(/<script[^>]*>(.*?)<\/script>/gs)]
+      .map(m => m[1]).filter(s => s.length > 500);
+
+    for (const raw of scripts) {
+      let decoded: string;
+      try { decoded = Buffer.from(raw, 'base64').toString('utf-8'); } catch { continue; }
+      let data: any;
+      try { data = JSON.parse(decoded); } catch { continue; }
+      const user = data?.entities?.items?.[`spotify:user:${CONFIG.spotify}`];
+      if (!user?.publicPlaylistsV2?.items) continue;
+      return user.publicPlaylistsV2.items
+        .filter((w: any) => w?.data?.uri)
+        .map((w: any) => {
+          const d = w.data;
+          const pid = d.uri.split(':').pop();
+          return {
+            id: pid,
+            name: d.name || 'Untitled',
+            url: `https://open.spotify.com/playlist/${pid}`,
+            embedUrl: `https://open.spotify.com/embed/playlist/${pid}`,
+            image: d.images?.items?.[0]?.sources?.[0]?.url || '',
+          };
+        });
+    }
+    return [];
+  } catch { return []; }
+}
+
+const spotify = defineCollection({
+  loader: async () => {
+    return (await fetchSpotifyViaAPI()) ?? (await fetchSpotifyViaScrape());
   },
   schema: z.object({
     name: z.string(),
-    description: z.string(),
     url: z.string(),
     embedUrl: z.string(),
     image: z.string(),
-    tracks: z.number(),
-    date: z.string(),
   }),
 });
 
@@ -160,7 +197,7 @@ const letterboxd = defineCollection({
         const pubDate = xmlText(b, 'pubDate');
         const desc = xmlCdata(b, 'description') || '';
         const poster = desc.match(/<img src="([^"]+)"/)?.[1];
-        const review = stripHtml(desc).slice(0, 200);
+        const review = stripHtml(desc).slice(0, 600);
         if (filmTitle && pubDate) {
           entries.push({
             id: makeId(link),
@@ -197,7 +234,7 @@ const substackFeed = defineCollection({
         const link = xmlText(b, 'link') || '';
         const pubDate = xmlText(b, 'pubDate');
         const desc = xmlCdata(b, 'description') || xmlText(b, 'description') || '';
-        const excerpt = stripHtml(desc).slice(0, 200);
+        const excerpt = stripHtml(desc).slice(0, 500);
         if (title && pubDate) {
           entries.push({ id: makeId(link), title, excerpt: excerpt || undefined, url: link, date: pubDate });
         }
@@ -228,7 +265,7 @@ const mediumFeed = defineCollection({
         const link = xmlText(b, 'link') || '';
         const pubDate = xmlText(b, 'pubDate');
         const desc = xmlCdata(b, 'description') || xmlText(b, 'description') || '';
-        const excerpt = stripHtml(desc).slice(0, 200);
+        const excerpt = stripHtml(desc).slice(0, 500);
         if (title && pubDate) {
           entries.push({ id: makeId(link), title, excerpt: excerpt || undefined, url: link, date: pubDate });
         }

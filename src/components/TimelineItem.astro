@@ -1,0 +1,287 @@
+---
+export interface TimelineEntry {
+  title: string;
+  description?: string;
+  date: Date;
+  world: string;
+  source: string;
+  url: string;
+  external: boolean;
+  image?: string;
+  meta?: Record<string, any>;
+  htmlContent?: string;
+}
+
+interface Props {
+  item: TimelineEntry;
+}
+
+const { item } = Astro.props;
+
+const worldLabels: Record<string, string> = {
+  tech: 'Tech', film: 'Film', music: 'Music', philosophy: 'Philosophy', travel: 'Travel',
+};
+
+const sourceLabels: Record<string, string> = {
+  post: '', youtube: 'YouTube', letterboxd: 'Letterboxd', carousel: '',
+  substack: 'Substack', medium: 'Medium', github: 'GitHub',
+  soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Photos',
+};
+
+const dateStr = item.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+function starString(rating: number): string {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  return '\u2605'.repeat(full) + (half ? '\u00BD' : '');
+}
+
+const langColors: Record<string, string> = {
+  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
+  Go: '#00ADD8', Rust: '#dea584', Java: '#b07219', HTML: '#e34c26',
+  CSS: '#563d7c', Shell: '#89e051', Ruby: '#701516', C: '#555555',
+};
+
+function ytEmbedUrl(videoId: string) {
+  const params = new URLSearchParams({
+    autoplay: '0', mute: '1', controls: '1', loop: '1',
+    playlist: videoId, playsinline: '1', rel: '0',
+    modestbranding: '1', enablejsapi: '1', vq: 'hd1080',
+  });
+  return `https://www.youtube.com/embed/${videoId}?${params}`;
+}
+
+const worldColor = `var(--${item.world})`;
+---
+
+<div class:list={['tl-slide', `slide-${item.source}`]} data-world={item.world} data-source={item.source} data-date={item.date.toISOString()}>
+
+  {/* ---- YouTube Video ---- */}
+  {item.source === 'youtube' && item.meta?.videoId && (
+    <div class="slide-video" data-video-id={item.meta.videoId}>
+      <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen />
+    </div>
+    <button class="slide-mute-btn" aria-label="Unmute">
+      <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+      </svg>
+      <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/>
+      </svg>
+    </button>
+    <div class="slide-overlay">
+      <div class="slide-meta">
+        <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+        <span class="slide-source">{sourceLabels[item.source]}</span>
+        <span class="slide-date">{dateStr}</span>
+      </div>
+      <h2 class="slide-title">{item.title}</h2>
+      <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Watch on YouTube &rarr;</a>
+    </div>
+  )}
+
+  {/* ---- Carousel Image ---- */}
+  {item.source === 'carousel' && item.image && (
+    <div class="slide-bg">
+      <img src={item.image} alt={item.title} loading="lazy" />
+    </div>
+    <div class="slide-overlay">
+      <div class="slide-meta">
+        <span class="slide-date">{dateStr}</span>
+      </div>
+      <h2 class="slide-title">{item.title}</h2>
+    </div>
+  )}
+
+  {/* ---- Blog Post ---- */}
+  {item.source === 'post' && (
+    <Fragment>
+      {item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" />
+        </div>
+      )}
+      {!item.image && (
+        <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}>
+        </div>
+      )}
+      <div class="slide-overlay slide-overlay-post">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.htmlContent && (
+          <div class="slide-prose">
+            {item.htmlContent.split('\n').filter(Boolean).map((para: string) => (
+              <p>{para}</p>
+            ))}
+          </div>
+        )}
+        {!item.htmlContent && item.description && <p class="slide-desc">{item.description}</p>}
+        <a href={item.url} class="slide-cta">Read full post &rarr;</a>
+      </div>
+    </Fragment>
+  )}
+
+  {/* ---- Letterboxd Review ---- */}
+  {item.source === 'letterboxd' && (
+    <Fragment>
+      {item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" class="slide-bg-blur" />
+        </div>
+      )}
+      <div class="slide-center slide-center-letterboxd">
+        {item.image && (
+          <div class="slide-poster">
+            <img src={item.image} alt={item.title} loading="lazy" />
+          </div>
+        )}
+        <div class="slide-letterboxd-info">
+          {item.meta?.rating && <div class="slide-rating">{starString(item.meta.rating)}</div>}
+          <h2 class="slide-title">{item.title}</h2>
+          <div class="slide-meta">
+            <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+            <span class="slide-source">{sourceLabels[item.source]}</span>
+            <span class="slide-date">{dateStr}</span>
+          </div>
+          {item.description && <p class="slide-review">{item.description}</p>}
+          <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on Letterboxd &rarr;</a>
+        </div>
+      </div>
+    </Fragment>
+  )}
+
+  {/* ---- GitHub Repo ---- */}
+  {item.source === 'github' && (
+    <Fragment>
+      <div class="slide-center">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.description && <p class="slide-desc">{item.description}</p>}
+        <div class="slide-meta" style="margin-top: 0.75rem">
+          {item.meta?.language && (
+            <span class="slide-lang">
+              <span class="slide-lang-dot" style={`background: ${langColors[item.meta.language] || '#888'}`}></span>
+              {item.meta.language}
+            </span>
+          )}
+          {item.meta?.stars > 0 && <span class="slide-stars">{'\u2606'} {item.meta.stars}</span>}
+        </div>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on GitHub &rarr;</a>
+      </div>
+    </Fragment>
+  )}
+
+  {/* ---- Spotify Playlist ---- */}
+  {item.source === 'spotify' && (
+    <Fragment>
+      {item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" class="slide-bg-blur" />
+        </div>
+      )}
+      <div class="slide-center">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.meta?.embedUrl && (
+          <div class="slide-spotify-embed">
+            <iframe
+              src={item.meta.embedUrl}
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+            />
+          </div>
+        )}
+      </div>
+    </Fragment>
+  )}
+
+  {/* ---- SoundCloud Track ---- */}
+  {item.source === 'soundcloud' && (
+    <Fragment>
+      {item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" class="slide-bg-blur" />
+        </div>
+      )}
+      <div class="slide-center">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        <div class="slide-soundcloud-embed">
+          <iframe
+            scrolling="no"
+            frameborder="no"
+            allow="autoplay"
+            src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(item.url)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`}
+            loading="lazy"
+          />
+        </div>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on SoundCloud &rarr;</a>
+      </div>
+    </Fragment>
+  )}
+
+  {/* ---- Substack / Medium Article ---- */}
+  {(item.source === 'substack' || item.source === 'medium') && (
+    <Fragment>
+      <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}></div>
+      <div class="slide-center slide-center-article">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.description && <p class="slide-excerpt">{item.description}</p>}
+        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Read full article on {sourceLabels[item.source]} &rarr;</a>
+      </div>
+    </Fragment>
+  )}
+
+  {/* ---- Photo Gallery ---- */}
+  {item.source === 'gallery' && (
+    <Fragment>
+      {item.meta?.photos && (
+        <div class="slide-gallery-grid" data-gallery>
+          {(item.meta.photos as string[]).slice(0, 9).map((src: string, i: number) => (
+            <img src={src} alt={`${item.title} ${i + 1}`} loading="lazy" data-gallery-img={i} />
+          ))}
+        </div>
+      )}
+      {!item.meta?.photos && item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" />
+        </div>
+      )}
+      <div class="slide-overlay slide-overlay-gallery">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.description && <p class="slide-desc">{item.description}</p>}
+        {item.meta?.photos && item.meta.photos.length > 9 && (
+          <a href={item.url} class="slide-cta">+{item.meta.photos.length - 9} more photos &rarr;</a>
+        )}
+        {(!item.meta?.photos || item.meta.photos.length <= 9) && (
+          <a href={item.url} class="slide-cta">View full gallery &rarr;</a>
+        )}
+      </div>
+    </Fragment>
+  )}
+
+</div>
