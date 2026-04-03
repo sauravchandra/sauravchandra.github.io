@@ -44,7 +44,7 @@ const langColors: Record<string, string> = {
 
 function ytEmbedUrl(videoId: string) {
   const params = new URLSearchParams({
-    autoplay: '0', mute: '1', controls: '1', loop: '1',
+    autoplay: '1', mute: '1', controls: '0', loop: '1',
     playlist: videoId, playsinline: '1', rel: '0',
     modestbranding: '1', enablejsapi: '1', vq: 'hd1080',
   });

@@ -162,18 +162,36 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
   // --- 1. Video Observer: load/unload iframe on snap ---
   const videoSlides = document.querySelectorAll<HTMLElement>('.slide-video');
 
+  const ytHideTimers = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
+
   const videoObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       const el = entry.target as HTMLElement;
+      const slide = el.closest('.tl-slide') as HTMLElement | null;
       const iframe = el.querySelector('iframe') as HTMLIFrameElement | null;
-      if (!iframe) return;
+      if (!iframe || !slide) return;
       if (entry.isIntersecting) {
         if (!iframe.src) iframe.src = iframe.dataset.src || '';
+        else iframe.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+        const timer = setTimeout(() => slide.classList.add('yt-playing'), 3000);
+        ytHideTimers.set(slide, timer);
       } else {
-        if (iframe.src) iframe.src = '';
+        iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        clearTimeout(ytHideTimers.get(slide));
+        slide.classList.remove('yt-playing');
       }
     });
   }, { root: timeline, threshold: 0.5 });
+
+  document.querySelectorAll<HTMLElement>('.slide-youtube').forEach((slide) => {
+    slide.addEventListener('click', () => {
+      if (!slide.classList.contains('yt-playing')) return;
+      slide.classList.remove('yt-playing');
+      clearTimeout(ytHideTimers.get(slide));
+      const timer = setTimeout(() => slide.classList.add('yt-playing'), 3000);
+      ytHideTimers.set(slide, timer);
+    });
+  });
 
   videoSlides.forEach((v) => videoObserver.observe(v));
 

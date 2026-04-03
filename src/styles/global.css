@@ -525,6 +525,38 @@ img { max-width: 100%; display: block; }
   border: 0;
 }
 
+.slide-youtube .slide-overlay {
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.slide-youtube .slide-overlay .slide-cta,
+.slide-youtube .slide-overlay .slide-title-link,
+.slide-youtube .slide-mute-btn {
+  pointer-events: auto;
+}
+
+.slide-youtube .slide-mute-btn {
+  transition: opacity 0.4s ease;
+}
+
+.slide-youtube.yt-playing .slide-overlay,
+.slide-youtube.yt-playing .slide-mute-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slide-youtube.yt-playing:hover .slide-overlay,
+.slide-youtube.yt-playing:hover .slide-mute-btn {
+  opacity: 1;
+}
+
+.slide-youtube.yt-playing:hover .slide-overlay .slide-cta,
+.slide-youtube.yt-playing:hover .slide-overlay .slide-title-link,
+.slide-youtube.yt-playing:hover .slide-mute-btn {
+  pointer-events: auto;
+}
+
 .slide-mute-btn {
   position: absolute;
   bottom: 5.5rem;
