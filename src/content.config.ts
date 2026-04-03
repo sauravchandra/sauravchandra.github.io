@@ -12,7 +12,7 @@ const CONFIG = {
   spotify: 'sauravchandra',
 };
 
-const worlds = ['tech', 'film', 'music', 'philosophy', 'travel'] as const;
+const worlds = ['tech', 'film', 'music', 'writing', 'travel'] as const;
 
 function xmlText(block: string, tag: string): string | undefined {
   return block.match(new RegExp(`<${tag}>([^<]+)</${tag}>`))?.[1];

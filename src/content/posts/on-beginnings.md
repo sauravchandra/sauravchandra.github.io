@@ -2,7 +2,7 @@
 title: "On Beginnings"
 description: "Thoughts on starting over, and why it matters."
 date: 2026-04-03
-world: philosophy
+world: writing
 tags: ["life"]
 cover: "/images/beginnings.jpg"
 ---

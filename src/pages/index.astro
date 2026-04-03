@@ -78,7 +78,7 @@ const ssEntries = await getCollection('substackFeed');
 for (const s of ssEntries) {
   feed.push({
     title: s.data.title, description: s.data.excerpt,
-    date: s.data.date, world: 'philosophy', source: 'substack',
+    date: s.data.date, world: 'writing', source: 'substack',
     url: s.data.url, external: true,
     meta: { slideId: uniqueSlug(s.data.title, 'ss') },
   });
@@ -88,7 +88,7 @@ const mdEntries = await getCollection('mediumFeed');
 for (const m of mdEntries) {
   feed.push({
     title: m.data.title, description: m.data.excerpt,
-    date: m.data.date, world: 'philosophy', source: 'medium',
+    date: m.data.date, world: 'writing', source: 'medium',
     url: m.data.url, external: true,
     meta: { slideId: uniqueSlug(m.data.title, 'md') },
   });
