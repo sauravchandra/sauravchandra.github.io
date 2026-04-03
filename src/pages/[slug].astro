@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+
+const worldLabels: Record<string, string> = {
+  tech: 'Tech',
+  film: 'Film',
+  music: 'Music',
+  philosophy: 'Philosophy',
+  travel: 'Travel',
+};
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<Base title={`${post.data.title} — Saurav Chandra`} description={post.data.description}>
+  <article class="entry" style={`--accent: var(--${post.data.world})`}>
+    <div class="container">
+      <header class="entry-header">
+        <a href="/" class="entry-back" onclick="if(history.length>1){event.preventDefault();history.back()}">&larr; Back</a>
+        <time>{post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+        <h1>{post.data.title}</h1>
+        {post.data.tags && (
+          <div class="entry-tags">
+            {post.data.tags.map((tag: string) => <span class="tag">{tag}</span>)}
+          </div>
+        )}
+      </header>
+      <div class="entry-content prose">
+        <Content />
+      </div>
+    </div>
+  </article>
+</Base>

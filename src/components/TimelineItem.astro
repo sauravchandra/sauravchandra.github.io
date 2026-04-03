@@ -52,95 +52,82 @@ function ytEmbedUrl(videoId: string) {
 }
 
 const worldColor = `var(--${item.world})`;
-const hasScrollContent = item.source === 'post' || item.source === 'gallery';
+const slideId = item.meta?.slideId || '';
 ---
 
-<div class:list={['tl-slide', `slide-${item.source}`]} data-world={item.world} data-source={item.source} data-date={item.date.toISOString()}>
+<div class:list={['tl-slide', `slide-${item.source}`]} data-world={item.world} data-source={item.source} data-date={item.date.toISOString()} id={slideId}>
 
   {/* ---- YouTube Video ---- */}
   {item.source === 'youtube' && item.meta?.videoId && (
-    <div class="slide-hero">
-      <div class="slide-video" data-video-id={item.meta.videoId}>
-        <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen />
+    <div class="slide-video" data-video-id={item.meta.videoId}>
+      <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen />
+    </div>
+    <button class="slide-mute-btn" aria-label="Unmute">
+      <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+      </svg>
+      <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/>
+      </svg>
+    </button>
+    <div class="slide-overlay">
+      <div class="slide-meta">
+        <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+        <span class="slide-source">{sourceLabels[item.source]}</span>
+        <span class="slide-date">{dateStr}</span>
       </div>
-      <button class="slide-mute-btn" aria-label="Unmute">
-        <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
-        </svg>
-        <svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-          <path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/>
-        </svg>
-      </button>
-      <div class="slide-overlay">
-        <div class="slide-meta">
-          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
-          <span class="slide-source">{sourceLabels[item.source]}</span>
-          <span class="slide-date">{dateStr}</span>
-        </div>
-        <h2 class="slide-title">{item.title}</h2>
-        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Watch on YouTube &rarr;</a>
-      </div>
+      <h2 class="slide-title">{item.title}</h2>
+      <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Watch on YouTube &rarr;</a>
     </div>
   )}
 
   {/* ---- Carousel Image ---- */}
   {item.source === 'carousel' && item.image && (
-    <div class="slide-hero">
-      <div class="slide-bg">
-        <img src={item.image} alt={item.title} loading="lazy" />
+    <div class="slide-bg">
+      <img src={item.image} alt={item.title} loading="lazy" />
+    </div>
+    <div class="slide-overlay">
+      <div class="slide-meta">
+        <span class="slide-date">{dateStr}</span>
       </div>
-      <div class="slide-overlay">
-        <div class="slide-meta">
-          <span class="slide-date">{dateStr}</span>
-        </div>
-        <h2 class="slide-title">{item.title}</h2>
-      </div>
+      <h2 class="slide-title">{item.title}</h2>
     </div>
   )}
 
-  {/* ---- Blog Post: Hero + full article below ---- */}
+  {/* ---- Blog Post ---- */}
   {item.source === 'post' && (
     <Fragment>
-      <div class="slide-hero">
-        {item.image && (
-          <div class="slide-bg">
-            <img src={item.image} alt={item.title} loading="lazy" />
-          </div>
-        )}
-        {!item.image && (
-          <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}></div>
-        )}
-        <div class="slide-overlay">
-          <div class="slide-meta">
-            <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
-            <span class="slide-date">{dateStr}</span>
-          </div>
-          <h2 class="slide-title">{item.title}</h2>
-          {item.description && <p class="slide-desc">{item.description}</p>}
-        </div>
-        {item.htmlContent && (
-          <div class="slide-scroll-hint">
-            <span>Scroll to read</span>
-            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        )}
-      </div>
-      {item.htmlContent && (
-        <div class="slide-post-body">
-          {item.meta?.tags && (
-            <div class="slide-post-tags">
-              {(item.meta.tags as string[]).map((tag: string) => <span class="tag">{tag}</span>)}
-            </div>
-          )}
-          <div class="prose" set:html={item.htmlContent} />
+      {item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" />
         </div>
       )}
+      {!item.image && (
+        <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}>
+        </div>
+      )}
+      <div class="slide-overlay slide-overlay-post">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.htmlContent && (
+          <div class="slide-prose">
+            {item.htmlContent.split('\n').filter(Boolean).map((para: string) => (
+              <p>{para}</p>
+            ))}
+          </div>
+        )}
+        {!item.htmlContent && item.description && <p class="slide-desc">{item.description}</p>}
+        <a href={item.url} class="slide-cta">Read full post &rarr;</a>
+      </div>
     </Fragment>
   )}
 
   {/* ---- Letterboxd Review ---- */}
   {item.source === 'letterboxd' && (
-    <div class="slide-hero">
+    <Fragment>
       {item.image && (
         <div class="slide-bg">
           <img src={item.image} alt={item.title} loading="lazy" class="slide-bg-blur" />
@@ -164,12 +151,12 @@ const hasScrollContent = item.source === 'post' || item.source === 'gallery';
           <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on Letterboxd &rarr;</a>
         </div>
       </div>
-    </div>
+    </Fragment>
   )}
 
   {/* ---- GitHub Repo ---- */}
   {item.source === 'github' && (
-    <div class="slide-hero">
+    <Fragment>
       <div class="slide-center">
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
@@ -189,12 +176,12 @@ const hasScrollContent = item.source === 'post' || item.source === 'gallery';
         </div>
         <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on GitHub &rarr;</a>
       </div>
-    </div>
+    </Fragment>
   )}
 
   {/* ---- Spotify Playlist ---- */}
   {item.source === 'spotify' && (
-    <div class="slide-hero">
+    <Fragment>
       {item.image && (
         <div class="slide-bg">
           <img src={item.image} alt={item.title} loading="lazy" class="slide-bg-blur" />
@@ -216,12 +203,12 @@ const hasScrollContent = item.source === 'post' || item.source === 'gallery';
           </div>
         )}
       </div>
-    </div>
+    </Fragment>
   )}
 
   {/* ---- SoundCloud Track ---- */}
   {item.source === 'soundcloud' && (
-    <div class="slide-hero">
+    <Fragment>
       {item.image && (
         <div class="slide-bg">
           <img src={item.image} alt={item.title} loading="lazy" class="slide-bg-blur" />
@@ -234,23 +221,25 @@ const hasScrollContent = item.source === 'post' || item.source === 'gallery';
           <span class="slide-date">{dateStr}</span>
         </div>
         <h2 class="slide-title">{item.title}</h2>
-        <div class="slide-soundcloud-embed">
-          <iframe
-            scrolling="no"
-            frameborder="no"
-            allow="autoplay"
-            src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(item.url)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`}
-            loading="lazy"
-          />
-        </div>
+        {item.meta?.embedUrl && (
+          <div class="slide-soundcloud-embed">
+            <iframe
+              scrolling="no"
+              frameborder="no"
+              allow="autoplay"
+              src={item.meta.embedUrl}
+              loading="lazy"
+            />
+          </div>
+        )}
         <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on SoundCloud &rarr;</a>
       </div>
-    </div>
+    </Fragment>
   )}
 
   {/* ---- Substack / Medium Article ---- */}
   {(item.source === 'substack' || item.source === 'medium') && (
-    <div class="slide-hero">
+    <Fragment>
       <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}></div>
       <div class="slide-center slide-center-article">
         <div class="slide-meta">
@@ -262,48 +251,39 @@ const hasScrollContent = item.source === 'post' || item.source === 'gallery';
         {item.description && <p class="slide-excerpt">{item.description}</p>}
         <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Read full article on {sourceLabels[item.source]} &rarr;</a>
       </div>
-    </div>
+    </Fragment>
   )}
 
-  {/* ---- Photo Gallery: Hero grid + full photo stream below ---- */}
+  {/* ---- Photo Gallery ---- */}
   {item.source === 'gallery' && (
     <Fragment>
-      <div class="slide-hero">
-        {item.meta?.photos && (
-          <div class="slide-gallery-hero">
-            {(item.meta.photos as string[]).slice(0, 9).map((src: string, i: number) => (
-              <img src={src} alt={`${item.title} ${i + 1}`} loading="lazy" />
-            ))}
-          </div>
-        )}
-        {!item.meta?.photos && item.image && (
-          <div class="slide-bg">
-            <img src={item.image} alt={item.title} loading="lazy" />
-          </div>
-        )}
-        <div class="slide-overlay slide-overlay-gallery">
-          <div class="slide-meta">
-            <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
-            <span class="slide-source">{sourceLabels[item.source]}</span>
-            <span class="slide-date">{dateStr}</span>
-          </div>
-          <h2 class="slide-title">{item.title}</h2>
-          {item.description && <p class="slide-desc">{item.description}</p>}
-        </div>
-        {item.meta?.photos && item.meta.photos.length > 0 && (
-          <div class="slide-scroll-hint">
-            <span>Scroll for all photos</span>
-            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        )}
-      </div>
       {item.meta?.photos && (
-        <div class="slide-gallery-stream" data-gallery>
-          {(item.meta.photos as string[]).map((src: string, i: number) => (
+        <div class="slide-gallery-grid" data-gallery>
+          {(item.meta.photos as string[]).slice(0, 9).map((src: string, i: number) => (
             <img src={src} alt={`${item.title} ${i + 1}`} loading="lazy" data-gallery-img={i} />
           ))}
         </div>
       )}
+      {!item.meta?.photos && item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" />
+        </div>
+      )}
+      <div class="slide-overlay slide-overlay-gallery">
+        <div class="slide-meta">
+          <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+          <span class="slide-date">{dateStr}</span>
+        </div>
+        <h2 class="slide-title">{item.title}</h2>
+        {item.description && <p class="slide-desc">{item.description}</p>}
+        {item.meta?.photos && item.meta.photos.length > 9 && (
+          <a href={item.url} class="slide-cta">+{item.meta.photos.length - 9} more photos &rarr;</a>
+        )}
+        {(!item.meta?.photos || item.meta.photos.length <= 9) && (
+          <a href={item.url} class="slide-cta">View full gallery &rarr;</a>
+        )}
+      </div>
     </Fragment>
   )}
 

@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
 
 interface Props {
   title?: string;
@@ -30,10 +31,18 @@ const {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 </head>
-<body>
-  <Nav />
-  <main>
-    <slot />
-  </main>
+<body class:list={[{ 'page-subpage': !isTimeline }]}>
+  {isTimeline ? (
+    <Nav />
+    <main>
+      <slot />
+    </main>
+  ) : (
+    <Nav />
+    <main style="flex: 1;">
+      <slot />
+    </main>
+    <Footer />
+  )}
 </body>
 </html>

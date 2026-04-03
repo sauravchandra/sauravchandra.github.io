@@ -8,7 +8,7 @@ const CONFIG = {
   substack: 'sauravchandra',
   medium: 'sauravchandra123',
   github: 'sauravchandra',
-  soundcloud: '19843180',
+  soundcloud: 'sauravchandra',
   spotify: 'sauravchandra',
 };
 
@@ -316,28 +316,22 @@ const github = defineCollection({
 const soundcloud = defineCollection({
   loader: async () => {
     try {
-      const res = await fetch(
-        `https://feeds.soundcloud.com/users/soundcloud:users:${CONFIG.soundcloud}/sounds.rss`
+      const profileUrl = `https://soundcloud.com/${CONFIG.soundcloud}`;
+      const oembed = await fetch(
+        `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(profileUrl)}`
       );
-      if (!res.ok) return [];
-      const xml = await res.text();
-      const entries: any[] = [];
-      const re = /<item>([\s\S]*?)<\/item>/g;
-      let m;
-      while ((m = re.exec(xml)) !== null) {
-        const b = m[1];
-        const title = xmlText(b, 'title') || '';
-        const link = xmlText(b, 'link') || '';
-        const pubDate = xmlText(b, 'pubDate');
-        const artwork = b.match(/<itunes:image href="([^"]+)"/)?.[1];
-        if (title && pubDate) {
-          entries.push({
-            id: makeId(link), trackTitle: title, url: link,
-            date: pubDate, artwork: artwork || undefined,
-          });
-        }
-      }
-      return entries;
+      if (!oembed.ok) return [];
+      const data = await oembed.json() as any;
+      const srcMatch = data.html?.match(/src="([^"]+)"/);
+      if (!srcMatch) return [];
+      return [{
+        id: 'soundcloud-profile',
+        trackTitle: data.author_name || 'SoundCloud',
+        url: data.author_url || profileUrl,
+        date: new Date().toISOString(),
+        artwork: data.thumbnail_url || '',
+        embedUrl: srcMatch[1],
+      }];
     } catch { return []; }
   },
   schema: z.object({
@@ -345,6 +339,7 @@ const soundcloud = defineCollection({
     url: z.string(),
     date: z.coerce.date(),
     artwork: z.string().optional(),
+    embedUrl: z.string().optional(),
   }),
 });
 

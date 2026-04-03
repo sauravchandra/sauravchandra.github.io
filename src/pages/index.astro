@@ -2,23 +2,46 @@
 import Base from '../layouts/Base.astro';
 import TimelineItem from '../components/TimelineItem.astro';
 import type { TimelineEntry } from '../components/TimelineItem.astro';
-import { getCollection, render } from 'astro:content';
+import { getCollection } from 'astro:content';
 
 const feed: TimelineEntry[] = [];
 
+function slugify(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60);
+}
+
+const usedSlugs = new Set<string>();
+function uniqueSlug(base: string, prefix: string): string {
+  let slug = prefix ? `${prefix}-${slugify(base)}` : slugify(base);
+  let i = 2;
+  while (usedSlugs.has(slug)) { slug = `${prefix}-${slugify(base)}-${i++}`; }
+  usedSlugs.add(slug);
+  return slug;
+}
+
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/^---[\s\S]*?---\n?/, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/`{1,3}[^`]*`{1,3}/g, '')
+    .replace(/^[-*>]\s+/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
 for (const p of allPosts) {
-  const { Content } = await render(p);
-  let html = '';
-  try {
-    const result = await Astro.slots.render('default');
-    html = result;
-  } catch {}
+  const bodyText = (p as any).body ? stripMarkdown((p as any).body).slice(0, 800) : undefined;
   feed.push({
     title: p.data.title, description: p.data.description,
     date: p.data.date, world: p.data.world, source: 'post',
     url: `/${p.id}/`, external: false, image: p.data.cover,
-    meta: { tags: p.data.tags, _Content: Content },
+    htmlContent: bodyText,
+    meta: { slideId: uniqueSlug(p.data.title, '') },
   });
 }
 
@@ -28,7 +51,7 @@ for (const v of ytVideos) {
     title: v.data.caption, date: v.data.date, world: 'film',
     source: 'youtube', url: `https://youtube.com/watch?v=${v.data.videoId}`,
     external: true, image: v.data.thumbnail,
-    meta: { videoId: v.data.videoId },
+    meta: { videoId: v.data.videoId, slideId: uniqueSlug(v.data.caption, 'yt') },
   });
 }
 
@@ -37,6 +60,7 @@ for (const c of carouselSlides) {
   feed.push({
     title: c.data.caption, date: c.data.date, world: 'travel',
     source: 'carousel', url: '#', external: false, image: c.data.image,
+    meta: { slideId: uniqueSlug(c.data.caption, 'img') },
   });
 }
 
@@ -46,7 +70,7 @@ for (const lb of lbEntries) {
     title: lb.data.filmTitle, description: lb.data.review,
     date: lb.data.date, world: 'film', source: 'letterboxd',
     url: lb.data.url, external: true, image: lb.data.poster,
-    meta: { rating: lb.data.rating },
+    meta: { rating: lb.data.rating, slideId: uniqueSlug(lb.data.filmTitle, 'film') },
   });
 }
 
@@ -56,6 +80,7 @@ for (const s of ssEntries) {
     title: s.data.title, description: s.data.excerpt,
     date: s.data.date, world: 'philosophy', source: 'substack',
     url: s.data.url, external: true,
+    meta: { slideId: uniqueSlug(s.data.title, 'ss') },
   });
 }
 
@@ -65,6 +90,7 @@ for (const m of mdEntries) {
     title: m.data.title, description: m.data.excerpt,
     date: m.data.date, world: 'philosophy', source: 'medium',
     url: m.data.url, external: true,
+    meta: { slideId: uniqueSlug(m.data.title, 'md') },
   });
 }
 
@@ -74,7 +100,7 @@ for (const r of ghRepos) {
     title: r.data.name, description: r.data.description,
     date: r.data.date, world: 'tech', source: 'github',
     url: r.data.url, external: true,
-    meta: { language: r.data.language, stars: r.data.stars },
+    meta: { language: r.data.language, stars: r.data.stars, slideId: uniqueSlug(r.data.name, 'gh') },
   });
 }
 
@@ -84,6 +110,7 @@ for (const t of scTracks) {
     title: t.data.trackTitle, date: t.data.date, world: 'music',
     source: 'soundcloud', url: t.data.url, external: true,
     image: t.data.artwork,
+    meta: { slideId: uniqueSlug(t.data.trackTitle, 'sc'), embedUrl: t.data.embedUrl },
   });
 }
 
@@ -93,7 +120,7 @@ for (const sp of spEntries) {
     title: sp.data.name, date: new Date(), world: 'music',
     source: 'spotify', url: sp.data.url, external: true,
     image: sp.data.image,
-    meta: { embedUrl: sp.data.embedUrl },
+    meta: { embedUrl: sp.data.embedUrl, slideId: uniqueSlug(sp.data.name, 'sp') },
   });
 }
 
@@ -103,7 +130,7 @@ for (const g of galEntries) {
     title: g.data.title, description: g.data.location,
     date: g.data.date, world: 'travel', source: 'gallery',
     url: `/gallery/${g.id}/`, external: false, image: g.data.cover,
-    meta: { photos: g.data.photos },
+    meta: { photos: g.data.photos, slideId: uniqueSlug(g.data.title, 'gal') },
   });
 }
 
@@ -112,66 +139,15 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
 
 <Base isTimeline>
   <div class="timeline" id="timeline">
-    {feed.map((item) => {
-      if (item.source === 'post' && item.meta?._Content) {
-        const PostContent = item.meta._Content;
-        const postItem = { ...item, meta: { ...item.meta, _Content: undefined } };
-        return (
-          <div class:list={['tl-slide', 'slide-post']} data-world={item.world} data-source="post" data-date={item.date.toISOString()}>
-            <div class="slide-hero">
-              {item.image && (
-                <div class="slide-bg">
-                  <img src={item.image} alt={item.title} loading="lazy" />
-                </div>
-              )}
-              {!item.image && (
-                <div class="slide-bg" style={`background: linear-gradient(135deg, var(--${item.world}) 0%, #111 100%);`}></div>
-              )}
-              <div class="slide-overlay">
-                <div class="slide-meta">
-                  <span class="slide-world" style={`--accent: var(--${item.world})`}>{item.world.charAt(0).toUpperCase() + item.world.slice(1)}</span>
-                  <span class="slide-date">{item.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                </div>
-                <h2 class="slide-title">{item.title}</h2>
-                {item.description && <p class="slide-desc">{item.description}</p>}
-              </div>
-              <div class="slide-scroll-hint">
-                <span>Scroll to read</span>
-                <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-              </div>
-            </div>
-            <div class="slide-post-body">
-              {item.meta?.tags && (
-                <div class="slide-post-tags">
-                  {(item.meta.tags as string[]).map((tag: string) => <span class="tag">{tag}</span>)}
-                </div>
-              )}
-              <div class="prose">
-                <PostContent />
-              </div>
-            </div>
-          </div>
-        );
-      }
-      return <TimelineItem item={item} />;
-    })}
+    {feed.map((item) => <TimelineItem item={item} />)}
 
     {feed.length === 0 && (
-      <div class="tl-slide slide-empty-state" style="display:flex;align-items:center;justify-content:center;">
+      <div class="tl-slide slide-empty-state">
         <p class="slide-empty">Nothing here yet.</p>
       </div>
     )}
   </div>
 
-  <!-- Edge arrows -->
-  <button class="edge-arrow edge-arrow-left" id="arrowLeft" aria-label="Previous">
-    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-  </button>
-  <button class="edge-arrow edge-arrow-right visible" id="arrowRight" aria-label="Next">
-    <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
-  </button>
-
-  <!-- Bottom scrubber -->
   <div class="scrubber" id="scrubber">
     <div class="scrubber-track"></div>
     <div class="scrubber-thumb" id="scrubberThumb"></div>
@@ -183,21 +159,7 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
   const timeline = document.getElementById('timeline');
   if (!timeline) throw new Error('missing timeline');
 
-  const allSlides = Array.from(document.querySelectorAll<HTMLElement>('.tl-slide'));
-  let visibleSlides = allSlides.slice();
-
-  function currentSlideIndex(): number {
-    const sl = timeline.scrollLeft;
-    const vw = window.innerWidth;
-    return Math.round(sl / vw);
-  }
-
-  function goToSlide(idx: number) {
-    const clamped = Math.max(0, Math.min(idx, visibleSlides.length - 1));
-    visibleSlides[clamped]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-  }
-
-  // --- 1. Video Observer ---
+  // --- 1. Video Observer: load/unload iframe on snap ---
   const videoSlides = document.querySelectorAll<HTMLElement>('.slide-video');
 
   const videoObserver = new IntersectionObserver((entries) => {
@@ -230,7 +192,13 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
     });
   });
 
-  // --- 2. Gallery lightbox ---
+  // --- 1b. Stop scroll-snap when user scrolls inline content ---
+  document.querySelectorAll('.slide-prose, .slide-review, .slide-excerpt').forEach((el) => {
+    el.addEventListener('wheel', (e) => { e.stopPropagation(); }, { passive: true });
+    el.addEventListener('touchmove', (e) => { e.stopPropagation(); }, { passive: true });
+  });
+
+  // --- 1c. Inline gallery lightbox ---
   document.querySelectorAll('[data-gallery]').forEach((grid) => {
     const imgs = Array.from(grid.querySelectorAll('img'));
     imgs.forEach((img, idx) => {
@@ -266,76 +234,14 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
     });
   }
 
-  // --- 3. Edge arrows ---
-  const arrowLeft = document.getElementById('arrowLeft');
-  const arrowRight = document.getElementById('arrowRight');
-
-  function updateArrows() {
-    const idx = currentSlideIndex();
-    arrowLeft?.classList.toggle('visible', idx > 0);
-    arrowRight?.classList.toggle('visible', idx < visibleSlides.length - 1);
-  }
-
-  arrowLeft?.addEventListener('click', () => goToSlide(currentSlideIndex() - 1));
-  arrowRight?.addEventListener('click', () => goToSlide(currentSlideIndex() + 1));
-
-  // --- 4. Keyboard navigation ---
-  document.addEventListener('keydown', (e) => {
-    if (document.querySelector('.lightbox')) return;
-    if (e.key === 'ArrowLeft') { e.preventDefault(); goToSlide(currentSlideIndex() - 1); }
-    if (e.key === 'ArrowRight') { e.preventDefault(); goToSlide(currentSlideIndex() + 1); }
-  });
-
-  // --- 5. Wheel overflow: scroll past content edge → next/prev slide ---
-  allSlides.forEach((slide) => {
-    let wheelAccum = 0;
-    let wheelTimer: ReturnType<typeof setTimeout>;
-    const THRESHOLD = 120;
-
-    slide.addEventListener('wheel', (e) => {
-      const atTop = slide.scrollTop <= 0;
-      const atBottom = slide.scrollTop + slide.clientHeight >= slide.scrollHeight - 2;
-      const isVertical = Math.abs(e.deltaY) > Math.abs(e.deltaX);
-
-      if (isVertical && slide.scrollHeight > slide.clientHeight + 10) {
-        if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
-          wheelAccum += e.deltaY;
-          clearTimeout(wheelTimer);
-          wheelTimer = setTimeout(() => { wheelAccum = 0; }, 300);
-
-          if (Math.abs(wheelAccum) > THRESHOLD) {
-            const idx = currentSlideIndex();
-            goToSlide(wheelAccum > 0 ? idx + 1 : idx - 1);
-            wheelAccum = 0;
-          }
-          e.preventDefault();
-        } else {
-          wheelAccum = 0;
-        }
-      } else if (isVertical && slide.scrollHeight <= slide.clientHeight + 10) {
-        wheelAccum += e.deltaY;
-        clearTimeout(wheelTimer);
-        wheelTimer = setTimeout(() => { wheelAccum = 0; }, 300);
-
-        if (Math.abs(wheelAccum) > THRESHOLD) {
-          const idx = currentSlideIndex();
-          goToSlide(wheelAccum > 0 ? idx + 1 : idx - 1);
-          wheelAccum = 0;
-        }
-        e.preventDefault();
-      }
-    }, { passive: false });
-  });
-
-  // --- 6. Filter + Counter ---
+  // --- 2. Filter + Counter ---
   const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
+  const slides = document.querySelectorAll<HTMLElement>('.tl-slide');
   const counter = document.getElementById('navCounter');
 
   function updateCounter() {
-    if (counter) {
-      const idx = currentSlideIndex();
-      counter.textContent = `${idx + 1} / ${visibleSlides.length}`;
-    }
+    const visible = document.querySelectorAll<HTMLElement>('.tl-slide:not([style*="display: none"])');
+    if (counter) counter.textContent = `${visible.length}`;
   }
 
   buttons.forEach((btn) => {
@@ -343,55 +249,58 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
       buttons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       const filter = btn.dataset.filter;
-      allSlides.forEach((slide) => {
+      slides.forEach((slide) => {
         const show = filter === 'all' || slide.dataset.world === filter;
         slide.style.display = show ? '' : 'none';
       });
-      visibleSlides = allSlides.filter(s => s.style.display !== 'none');
-      if (visibleSlides.length > 0) {
-        visibleSlides[0].scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'start' });
-      }
       updateCounter();
-      updateArrows();
     });
   });
 
-  // --- 7. Horizontal scrubber ---
+  updateCounter();
+
+  // --- 3. Date Scrubber ---
   const scrubber = document.getElementById('scrubber');
   const thumb = document.getElementById('scrubberThumb');
   const label = document.getElementById('scrubberLabel');
 
-  if (scrubber && thumb && label) {
-    const TRACK_LEFT = 10;
-    const TRACK_RIGHT = 10;
+  if (scrubber && thumb && label && timeline) {
+    const TRACK_TOP = 10;
+    const TRACK_BOTTOM = 10;
     let hideTimer: ReturnType<typeof setTimeout>;
     let isDragging = false;
 
     function trackRange() {
-      const vw = window.innerWidth;
-      const left = vw * TRACK_LEFT / 100;
-      const right = vw - vw * TRACK_RIGHT / 100;
-      return { left, right, range: right - left };
+      const vh = window.innerHeight;
+      const top = vh * TRACK_TOP / 100;
+      const bottom = vh - vh * TRACK_BOTTOM / 100;
+      return { top, bottom, range: bottom - top };
     }
 
     function scrollFraction() {
-      const max = timeline.scrollWidth - timeline.clientWidth;
-      return max > 0 ? timeline.scrollLeft / max : 0;
+      const max = timeline.scrollHeight - timeline.clientHeight;
+      return max > 0 ? timeline.scrollTop / max : 0;
     }
 
     function currentDateLabel() {
-      const idx = currentSlideIndex();
-      const slide = visibleSlides[idx];
-      if (!slide?.dataset.date) return '';
-      const d = new Date(slide.dataset.date);
+      const mid = timeline.scrollTop + timeline.clientHeight / 2;
+      let closest: HTMLElement | null = null;
+      let closestDist = Infinity;
+      for (const s of slides) {
+        if (s.style.display === 'none') continue;
+        const dist = Math.abs((s as HTMLElement).offsetTop + (s as HTMLElement).offsetHeight / 2 - mid);
+        if (dist < closestDist) { closestDist = dist; closest = s as HTMLElement; }
+      }
+      if (!closest?.dataset.date) return '';
+      const d = new Date(closest.dataset.date);
       return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
     }
 
     function positionThumb() {
-      const { left, range } = trackRange();
-      const x = left + scrollFraction() * range;
-      thumb.style.left = `${x}px`;
-      label.style.left = `${x}px`;
+      const { top, range } = trackRange();
+      const y = top + scrollFraction() * range;
+      thumb.style.top = `${y}px`;
+      label.style.top = `${y}px`;
       label.textContent = currentDateLabel();
     }
 
@@ -406,8 +315,6 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
     timeline.addEventListener('scroll', () => {
       positionThumb();
       showScrubber();
-      updateCounter();
-      updateArrows();
     }, { passive: true });
 
     scrubber.addEventListener('mouseenter', showScrubber);
@@ -417,24 +324,24 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
       }
     });
 
-    function scrubTo(clientX: number) {
-      const { left, range } = trackRange();
-      const frac = Math.max(0, Math.min(1, (clientX - left) / range));
-      const max = timeline.scrollWidth - timeline.clientWidth;
-      timeline.scrollLeft = frac * max;
+    function scrubTo(clientY: number) {
+      const { top, range } = trackRange();
+      const frac = Math.max(0, Math.min(1, (clientY - top) / range));
+      const max = timeline.scrollHeight - timeline.clientHeight;
+      timeline.scrollTop = frac * max;
     }
 
     scrubber.addEventListener('mousedown', (e) => {
       isDragging = true;
       scrubber.classList.add('dragging');
-      scrubTo(e.clientX);
+      scrubTo(e.clientY);
       showScrubber();
       e.preventDefault();
     });
 
     window.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
-      scrubTo(e.clientX);
+      scrubTo(e.clientY);
     });
 
     window.addEventListener('mouseup', () => {
@@ -447,6 +354,75 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
     positionThumb();
   }
 
-  updateCounter();
-  updateArrows();
+  // --- 4. Keyboard navigation ---
+  function currentSlideIndex(): number {
+    const mid = timeline.scrollTop + timeline.clientHeight / 2;
+    let closest = 0;
+    let closestDist = Infinity;
+    const visible = Array.from(slides).filter(s => s.style.display !== 'none');
+    visible.forEach((s, i) => {
+      const dist = Math.abs(s.offsetTop + s.offsetHeight / 2 - mid);
+      if (dist < closestDist) { closestDist = dist; closest = i; }
+    });
+    return closest;
+  }
+
+  let keyNavTarget = -1;
+  let keyLocked = false;
+  let keySettleTimer: ReturnType<typeof setTimeout>;
+  const KEY_RATE = 200;
+
+  document.addEventListener('keydown', (e) => {
+    if (document.querySelector('.lightbox')) return;
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+
+    if (e.repeat && keyLocked) return;
+
+    const visible = Array.from(slides).filter(s => s.style.display !== 'none');
+    if (!visible.length) return;
+
+    const current = keyNavTarget >= 0 ? keyNavTarget : currentSlideIndex();
+    const next = e.key === 'ArrowDown'
+      ? Math.min(current + 1, visible.length - 1)
+      : Math.max(current - 1, 0);
+
+    keyNavTarget = next;
+    clearTimeout(keySettleTimer);
+
+    if (e.repeat) {
+      keyLocked = true;
+      setTimeout(() => { keyLocked = false; }, KEY_RATE);
+      timeline.style.scrollSnapType = 'none';
+      timeline.scrollTop = visible[next].offsetTop;
+      keySettleTimer = setTimeout(() => {
+        timeline.style.scrollSnapType = '';
+        keyNavTarget = -1;
+      }, 350);
+    } else {
+      visible[next].scrollIntoView({ behavior: 'smooth' });
+      keySettleTimer = setTimeout(() => { keyNavTarget = -1; }, 500);
+    }
+  });
+
+  // --- 5. Hash-based deep linking ---
+  const slideObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting && entry.target.id) {
+        history.replaceState(null, '', `#${entry.target.id}`);
+        break;
+      }
+    }
+  }, { root: timeline, threshold: 0.6 });
+
+  slides.forEach((s) => { if (s.id) slideObserver.observe(s); });
+
+  if (location.hash) {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target) {
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: 'instant' });
+      });
+    }
+  }
 </script>

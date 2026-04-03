@@ -1,0 +1,87 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const galleries = await getCollection('gallery');
+  return galleries.map((g) => ({
+    params: { slug: g.id },
+    props: { gallery: g },
+  }));
+}
+
+const { gallery } = Astro.props;
+const { title, date, location, photos } = gallery.data;
+const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base title={`${title} — Saurav Chandra`} description={location}>
+  <article class="gallery-page">
+    <div class="container">
+      <header class="gallery-header">
+        <a href="/" class="entry-back" onclick="if(history.length>1){event.preventDefault();history.back()}">&larr; Back</a>
+        <time>{dateStr}</time>
+        <h1>{title}</h1>
+        <p class="gallery-location">{location}</p>
+      </header>
+
+      <div class="gallery-grid">
+        {photos.map((src: string, i: number) => (
+          <div class="gallery-item" data-index={i}>
+            <img src={src} alt={`${title} — photo ${i + 1}`} loading={i < 4 ? 'eager' : 'lazy'} />
+          </div>
+        ))}
+      </div>
+    </div>
+  </article>
+
+  <div class="lightbox" id="lightbox" style="display: none;">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+    <button class="lightbox-prev" id="lightboxPrev" aria-label="Previous">&larr;</button>
+    <button class="lightbox-next" id="lightboxNext" aria-label="Next">&rarr;</button>
+    <img id="lightboxImg" src="" alt="" />
+    <span class="lightbox-counter" id="lightboxCounter"></span>
+  </div>
+</Base>
+
+<script>
+  const items = document.querySelectorAll<HTMLElement>('.gallery-item');
+  const lightbox = document.getElementById('lightbox')!;
+  const img = document.getElementById('lightboxImg') as HTMLImageElement;
+  const counter = document.getElementById('lightboxCounter')!;
+  const total = items.length;
+  let current = 0;
+
+  function show(index: number) {
+    current = ((index % total) + total) % total;
+    const src = items[current].querySelector('img')?.src || '';
+    img.src = src;
+    counter.textContent = `${current + 1} / ${total}`;
+    lightbox.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function hide() {
+    lightbox.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  items.forEach((item) => {
+    item.addEventListener('click', () => show(Number(item.dataset.index)));
+  });
+
+  document.getElementById('lightboxClose')?.addEventListener('click', hide);
+  document.getElementById('lightboxPrev')?.addEventListener('click', () => show(current - 1));
+  document.getElementById('lightboxNext')?.addEventListener('click', () => show(current + 1));
+
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) hide();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (lightbox.style.display === 'none') return;
+    if (e.key === 'Escape') hide();
+    if (e.key === 'ArrowLeft') show(current - 1);
+    if (e.key === 'ArrowRight') show(current + 1);
+  });
+</script>

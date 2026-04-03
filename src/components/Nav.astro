@@ -53,9 +53,6 @@ const worlds = [
   document.addEventListener('touchstart', showNav, { passive: true });
   document.addEventListener('scroll', showNav, { capture: true, passive: true });
 
-  const tl = document.getElementById('timeline');
-  if (tl) tl.addEventListener('scroll', showNav, { passive: true });
-
   hideTimer = setTimeout(() => nav?.classList.add('hidden'), HIDE_DELAY);
 
   toggle?.addEventListener('click', (e) => {
