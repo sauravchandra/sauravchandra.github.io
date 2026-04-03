@@ -111,7 +111,7 @@ const slideId = item.meta?.slideId || '';
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-date">{dateStr}</span>
         </div>
-        <h2 class="slide-title">{item.title}</h2>
+        <a href={item.url} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.htmlContent && (
           <div class="slide-prose">
             {item.htmlContent.split('\n').filter(Boolean).map((para: string) => (
