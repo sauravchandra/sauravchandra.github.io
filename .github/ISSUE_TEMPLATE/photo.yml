@@ -2,6 +2,18 @@ name: "New Photo"
 description: "Publish a photo"
 labels: ["photo"]
 body:
+  - type: dropdown
+    id: world
+    attributes:
+      label: World
+      options:
+        - tech
+        - film
+        - music
+        - writing
+        - travel
+    validations:
+      required: true
   - type: textarea
     id: photo
     attributes:

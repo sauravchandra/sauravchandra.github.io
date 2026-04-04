@@ -57,6 +57,7 @@ const photos = defineCollection({
     caption: z.string(),
     date: z.coerce.date(),
     image: z.string(),
+    world: z.enum(worldSlugs).optional(),
     tags: z.array(z.string()).optional(),
   }),
 });
@@ -67,6 +68,7 @@ const gallery = defineCollection({
     title: z.string(),
     description: z.string().optional(),
     date: z.coerce.date(),
+    world: z.enum(worldSlugs).optional(),
     location: z.string(),
     cover: z.string(),
     photos: z.array(z.string()),

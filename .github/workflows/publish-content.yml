@@ -182,11 +182,13 @@ jobs:
                 return;
               }
               const caption = field('Caption') || title;
+              const world = field('World').toLowerCase();
               const tags = field('Tags');
               let fm = '---\n';
               fm += `caption: "${esc(caption)}"\n`;
               fm += `date: ${today}\n`;
               fm += `image: "${imgs[0]}"\n`;
+              if (world) fm += `world: ${world}\n`;
               if (tags) {
                 const list = tags.split(',').map(t => t.trim()).filter(Boolean);
                 fm += `tags: [${list.map(t => `"${esc(t)}"`).join(', ')}]\n`;
@@ -208,10 +210,12 @@ jobs:
                 });
                 return;
               }
+              const world = field('World').toLowerCase();
               let fm = '---\n';
               fm += `title: "${esc(title)}"\n`;
               if (desc) fm += `description: "${esc(desc)}"\n`;
               fm += `date: ${today}\n`;
+              if (world) fm += `world: ${world}\n`;
               fm += `location: "${esc(location)}"\n`;
               fm += `cover: "${imgs[0]}"\n`;
               fm += 'photos:\n';

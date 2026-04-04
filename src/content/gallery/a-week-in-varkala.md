@@ -2,6 +2,7 @@
 title: "A Week in Varkala"
 description: "Walking along the beach everyday, sipping lime sodas with an omnipresent black cat."
 date: 2026-04-04
+world: travel
 location: "Varkala, Kerala"
 cover: "https://github.com/user-attachments/assets/05cb28e7-caf9-4a38-bbe7-0c8a1c9b5c26"
 photos:

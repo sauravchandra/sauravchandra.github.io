@@ -2,6 +2,18 @@ name: "New Gallery"
 description: "Publish a photo gallery"
 labels: ["gallery"]
 body:
+  - type: dropdown
+    id: world
+    attributes:
+      label: World
+      options:
+        - tech
+        - film
+        - music
+        - writing
+        - travel
+    validations:
+      required: true
   - type: input
     id: location
     attributes:
