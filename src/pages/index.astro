@@ -218,6 +218,10 @@ feed.sort((a, b) => {
 </Base>
 
 <script>
+  if (location.search || location.hash) {
+    history.replaceState(null, '', '/');
+  }
+
   const timeline = document.getElementById('timeline');
   if (!timeline) throw new Error('missing timeline');
 
@@ -321,12 +325,9 @@ feed.sort((a, b) => {
   let currentWorld = 'all';
   let currentView = 'timeline';
 
-  function syncUrl() {
-    const params = new URLSearchParams();
-    if (currentView !== 'timeline') params.set('view', currentView);
-    if (currentWorld !== 'all') params.set('world', currentWorld);
-    const qs = params.toString();
-    history.replaceState(null, '', qs ? `?${qs}${location.hash}` : `/${location.hash}`);
+  function syncState() {
+    sessionStorage.setItem('tl-view', currentView);
+    sessionStorage.setItem('tl-world', currentWorld);
   }
 
   function applyWorldFilter(world: string) {
@@ -337,7 +338,7 @@ feed.sort((a, b) => {
     catalogCards.forEach((card) => {
       card.style.display = (world === 'all' || card.dataset.world === world) ? '' : 'none';
     });
-    syncUrl();
+    syncState();
   }
 
   worldTabs.forEach((tab) => {
@@ -494,28 +495,7 @@ feed.sort((a, b) => {
     }
   });
 
-  // --- 5. Hash-based deep linking ---
-  const slideObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (entry.isIntersecting && entry.target.id) {
-        history.replaceState(null, '', `#${entry.target.id}`);
-        break;
-      }
-    }
-  }, { root: timeline, threshold: 0.6 });
-
-  slides.forEach((s) => { if (s.id) slideObserver.observe(s); });
-
-  if (location.hash) {
-    const target = document.getElementById(location.hash.slice(1));
-    if (target) {
-      requestAnimationFrame(() => {
-        target.scrollIntoView({ behavior: 'instant' });
-      });
-    }
-  }
-
-  // --- 6. View Toggle (Timeline / Catalog) ---
+  // --- 5. View Toggle (Timeline / Catalog) ---
   const viewBtns = document.querySelectorAll<HTMLButtonElement>('.view-btn');
   const catalogEl = document.getElementById('catalog');
 
@@ -532,17 +512,29 @@ feed.sort((a, b) => {
       scrubber?.style.removeProperty('display');
       if (catalogEl) catalogEl.style.display = 'none';
     }
-    syncUrl();
+    syncState();
   }
 
   viewBtns.forEach((btn) => {
     btn.addEventListener('click', () => switchView(btn.dataset.view || 'timeline'));
   });
 
-  // --- 7. Restore state from URL params ---
-  const initParams = new URLSearchParams(location.search);
-  const initWorld = initParams.get('world') || 'all';
-  const initView = initParams.get('view') || 'timeline';
+  // --- 6. Home logo resets state ---
+  document.querySelector('.nav-logo')?.addEventListener('click', (e) => {
+    if (location.pathname === '/') {
+      e.preventDefault();
+      sessionStorage.removeItem('tl-view');
+      sessionStorage.removeItem('tl-world');
+      worldTabs.forEach(t => t.classList.toggle('active', t.dataset.world === 'all'));
+      applyWorldFilter('all');
+      switchView('timeline');
+      timeline.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+
+  // --- 7. Restore state from sessionStorage ---
+  const initWorld = sessionStorage.getItem('tl-world') || 'all';
+  const initView = sessionStorage.getItem('tl-view') || 'timeline';
 
   if (initWorld !== 'all') {
     worldTabs.forEach(t => {
