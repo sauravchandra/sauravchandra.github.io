@@ -46,8 +46,21 @@ for (const p of allPosts) {
   });
 }
 
+const videoEntries = await getCollection('videos');
+const manualVideoIds = new Set(videoEntries.map(v => v.data.videoId));
+for (const v of videoEntries) {
+  feed.push({
+    title: v.data.title, description: v.data.description,
+    date: v.data.date, world: v.data.world, source: 'video',
+    url: `/video/${v.id}/`, external: false,
+    image: `https://img.youtube.com/vi/${v.data.videoId}/hqdefault.jpg`,
+    meta: { videoId: v.data.videoId, slideId: uniqueSlug(v.data.title, 'vid') },
+  });
+}
+
 const ytVideos = await getCollection('youtube');
 for (const v of ytVideos) {
+  if (manualVideoIds.has(v.data.videoId)) continue;
   feed.push({
     title: v.data.caption, date: v.data.date, world: 'film',
     source: 'youtube', url: `https://youtube.com/watch?v=${v.data.videoId}`,

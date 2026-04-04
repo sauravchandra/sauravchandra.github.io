@@ -21,7 +21,7 @@ interface Props {
 const { item } = Astro.props;
 
 const sourceLabels: Record<string, string> = {
-  post: 'Blog', youtube: 'YouTube', letterboxd: 'Letterboxd', photo: 'Photo',
+  post: 'Blog', youtube: 'YouTube', video: 'Video', letterboxd: 'Letterboxd', photo: 'Photo',
   substack: 'Substack', medium: 'Medium', github: 'GitHub',
   soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Gallery',
 };
@@ -52,7 +52,7 @@ function ytEmbedUrl(videoId: string) {
 }
 
 const ctaLabels: Record<string, string> = {
-  post: 'Read post', youtube: 'Watch on YouTube', photo: 'View photo',
+  post: 'Read post', youtube: 'Watch on YouTube', video: 'Watch video', photo: 'View photo',
   letterboxd: 'View on Letterboxd', github: 'View on GitHub',
   spotify: 'Listen on Spotify', soundcloud: 'Listen on SoundCloud',
   substack: 'Read on Substack', medium: 'Read on Medium', gallery: 'View gallery',
@@ -66,8 +66,8 @@ const linkRel = item.external ? 'noopener noreferrer' : undefined;
 
 <div class:list={['tl-slide', `slide-${item.source}`]} data-world={item.world} data-source={item.source} data-date={item.date.toISOString()} id={slideId}>
 
-  {/* ---- YouTube Video ---- */}
-  {item.source === 'youtube' && item.meta?.videoId && (
+  {/* ---- YouTube / Video ---- */}
+  {(item.source === 'youtube' || item.source === 'video') && item.meta?.videoId && (
     <div class="slide-video" data-video-id={item.meta.videoId}>
       <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen title={item.title} />
     </div>

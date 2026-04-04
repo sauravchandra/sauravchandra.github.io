@@ -62,6 +62,18 @@ const photos = defineCollection({
   }),
 });
 
+const videos = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/videos' }),
+  schema: z.object({
+    title: z.string(),
+    videoId: z.string(),
+    date: z.coerce.date(),
+    world: z.enum(worldSlugs),
+    description: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  }),
+});
+
 const gallery = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/gallery' }),
   schema: z.object({
@@ -464,6 +476,6 @@ const soundcloud = defineCollection({
 // ---------------------------------------------------------------------------
 
 export const collections = {
-  posts, photos, youtube, gallery, spotify,
+  posts, photos, videos, youtube, gallery, spotify,
   letterboxd, substackFeed, mediumFeed, github, soundcloud,
 };

@@ -1,0 +1,62 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { config } from '../../config';
+
+export async function getStaticPaths() {
+  const videos = await getCollection('videos');
+  return videos.map((v) => ({
+    params: { slug: v.id },
+    props: { video: v },
+  }));
+}
+
+const { video } = Astro.props;
+const { title, videoId, date, description } = video.data;
+const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+---
+
+<Base title={`${title} — ${config.name}`} description={description || title}>
+  <article class="entry">
+    <div class="container">
+      <header class="entry-header">
+        <a href="/" class="entry-back">&larr; Back</a>
+        <time datetime={date.toISOString()}>{dateStr}</time>
+        <h1>{title}</h1>
+      </header>
+
+      <div class="video-embed">
+        <iframe
+          src={embedUrl}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          title={title}
+        />
+      </div>
+
+      {description && <p class="video-desc">{description}</p>}
+    </div>
+  </article>
+</Base>
+
+<style>
+  .video-embed {
+    position: relative;
+    padding-bottom: 56.25%;
+    margin: 2rem 0;
+  }
+  .video-embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 8px;
+  }
+  .video-desc {
+    color: #aaa;
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+</style>

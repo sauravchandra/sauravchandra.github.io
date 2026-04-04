@@ -21,6 +21,7 @@ jobs:
               { name: 'post', color: '0e8a16', description: 'Blog post' },
               { name: 'photo', color: '1d76db', description: 'Photo' },
               { name: 'gallery', color: 'd93f0b', description: 'Photo gallery' },
+              { name: 'video', color: 'fbca04', description: 'YouTube video' },
               { name: 'delete', color: 'b60205', description: 'Delete content' },
             ];
             for (const l of labels) {
@@ -34,6 +35,7 @@ jobs:
         contains(github.event.issue.labels.*.name, 'post') ||
         contains(github.event.issue.labels.*.name, 'photo') ||
         contains(github.event.issue.labels.*.name, 'gallery') ||
+        contains(github.event.issue.labels.*.name, 'video') ||
         contains(github.event.issue.labels.*.name, 'delete')
       )
     runs-on: ubuntu-latest
@@ -73,13 +75,14 @@ jobs:
             const isPost = labels.includes('post');
             const isPhoto = labels.includes('photo');
             const isGallery = labels.includes('gallery');
+            const isVideo = labels.includes('video');
 
             const slug = title.toLowerCase()
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/^-+|-+$/g, '')
               .slice(0, 60);
-            const dir = isPost ? 'posts' : isPhoto ? 'photos' : isGallery ? 'gallery' : null;
-            const routePrefix = isPost ? 'blog' : isPhoto ? 'photo' : 'gallery';
+            const dir = isPost ? 'posts' : isPhoto ? 'photos' : isGallery ? 'gallery' : isVideo ? 'videos' : null;
+            const routePrefix = isPost ? 'blog' : isPhoto ? 'photo' : isGallery ? 'gallery' : 'video';
             const committer = {
               name: 'github-actions[bot]',
               email: '41898282+github-actions[bot]@users.noreply.github.com',
@@ -90,7 +93,7 @@ jobs:
               if (!dir) {
                 await github.rest.issues.createComment({
                   ...context.repo, issue_number: issue.number,
-                  body: 'Add a content type label (`post`, `photo`, or `gallery`) so I know which file to delete.',
+                  body: 'Add a content type label (`post`, `photo`, `gallery`, or `video`) so I know which file to delete.',
                 });
                 return;
               }
@@ -230,6 +233,34 @@ jobs:
               fm += '---\n';
               fileContent = fm;
               filePath = `src/content/gallery/${slug}.md`;
+
+            } else if (isVideo) {
+              const world = field('World').toLowerCase() || 'film';
+              const url = field('YouTube URL');
+              const vidMatch = url.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+              if (!vidMatch) {
+                await github.rest.issues.createComment({
+                  ...context.repo, issue_number: issue.number,
+                  body: 'Could not extract a video ID from that URL. Paste a YouTube link.',
+                });
+                return;
+              }
+              const videoId = vidMatch[1];
+              const desc = field('Description');
+              const tags = field('Tags');
+              let fm = '---\n';
+              fm += `title: "${esc(title)}"\n`;
+              fm += `videoId: "${videoId}"\n`;
+              fm += `date: ${today}\n`;
+              fm += `world: ${world}\n`;
+              if (desc) fm += `description: "${esc(desc)}"\n`;
+              if (tags) {
+                const list = tags.split(',').map(t => t.trim()).filter(Boolean);
+                fm += `tags: [${list.map(t => `"${esc(t)}"`).join(', ')}]\n`;
+              }
+              fm += '---\n';
+              fileContent = fm;
+              filePath = `src/content/videos/${slug}.md`;
             }
 
             // Commit the file (creates or updates)
