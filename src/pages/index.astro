@@ -40,7 +40,7 @@ for (const p of allPosts) {
   feed.push({
     title: p.data.title, description: p.data.description,
     date: p.data.date, world: p.data.world, source: 'post',
-    url: `/${p.id}/`, external: false, image: p.data.cover,
+    url: `/blog/${p.id}/`, external: false, image: p.data.cover,
     htmlContent: bodyText,
     meta: { slideId: uniqueSlug(p.data.title, '') },
   });
@@ -56,11 +56,11 @@ for (const v of ytVideos) {
   });
 }
 
-const carouselSlides = await getCollection('carousel');
-for (const c of carouselSlides) {
+const photoEntries = await getCollection('photos');
+for (const c of photoEntries) {
   feed.push({
     title: c.data.caption, date: c.data.date, world: 'travel',
-    source: 'carousel', url: '#', external: false, image: c.data.image,
+    source: 'photo', url: `/photo/${c.id}/`, external: false, image: c.data.image,
     meta: { slideId: uniqueSlug(c.data.caption, 'img') },
   });
 }
@@ -291,17 +291,17 @@ feed.sort((a, b) => {
     const lb = document.createElement('div');
     lb.className = 'lightbox';
     lb.innerHTML = `
-      <button class="lightbox-close">&times;</button>
-      <button class="lightbox-prev">&lsaquo;</button>
-      <img src="${srcs[idx]}" alt="">
-      <button class="lightbox-next">&rsaquo;</button>
+      <button class="lightbox-close" aria-label="Close">&times;</button>
+      <button class="lightbox-prev" aria-label="Previous">&lsaquo;</button>
+      <img src="${srcs[idx]}" alt="Photo ${idx + 1} of ${srcs.length}">
+      <button class="lightbox-next" aria-label="Next">&rsaquo;</button>
       <div class="lightbox-counter">${idx + 1} / ${srcs.length}</div>
     `;
     document.body.appendChild(lb);
 
     const imgEl = lb.querySelector('img')!;
     const counterEl = lb.querySelector('.lightbox-counter')!;
-    const update = () => { imgEl.src = srcs[idx]; counterEl.textContent = `${idx + 1} / ${srcs.length}`; };
+    const update = () => { imgEl.src = srcs[idx]; imgEl.alt = `Photo ${idx + 1} of ${srcs.length}`; counterEl.textContent = `${idx + 1} / ${srcs.length}`; };
 
     lb.querySelector('.lightbox-close')!.addEventListener('click', () => lb.remove());
     lb.querySelector('.lightbox-prev')!.addEventListener('click', () => { idx = (idx - 1 + srcs.length) % srcs.length; update(); });
@@ -319,6 +319,15 @@ feed.sort((a, b) => {
   const slides = document.querySelectorAll<HTMLElement>('.tl-slide');
   const catalogCards = document.querySelectorAll<HTMLElement>('.catalog-card');
   let currentWorld = 'all';
+  let currentView = 'timeline';
+
+  function syncUrl() {
+    const params = new URLSearchParams();
+    if (currentView !== 'timeline') params.set('view', currentView);
+    if (currentWorld !== 'all') params.set('world', currentWorld);
+    const qs = params.toString();
+    history.replaceState(null, '', qs ? `?${qs}${location.hash}` : `/${location.hash}`);
+  }
 
   function applyWorldFilter(world: string) {
     currentWorld = world;
@@ -328,6 +337,7 @@ feed.sort((a, b) => {
     catalogCards.forEach((card) => {
       card.style.display = (world === 'all' || card.dataset.world === world) ? '' : 'none';
     });
+    syncUrl();
   }
 
   worldTabs.forEach((tab) => {
@@ -509,21 +519,40 @@ feed.sort((a, b) => {
   const viewBtns = document.querySelectorAll<HTMLButtonElement>('.view-btn');
   const catalogEl = document.getElementById('catalog');
 
-  viewBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      viewBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.dataset.view;
+  function switchView(view: string) {
+    currentView = view;
+    viewBtns.forEach(b => b.classList.remove('active'));
+    viewBtns.forEach(b => { if (b.dataset.view === view) b.classList.add('active'); });
+    if (view === 'catalog') {
+      timeline.style.display = 'none';
+      scrubber?.style.setProperty('display', 'none');
+      if (catalogEl) catalogEl.style.display = '';
+    } else {
+      timeline.style.display = '';
+      scrubber?.style.removeProperty('display');
+      if (catalogEl) catalogEl.style.display = 'none';
+    }
+    syncUrl();
+  }
 
-      if (view === 'catalog') {
-        timeline.style.display = 'none';
-        scrubber?.style.setProperty('display', 'none');
-        if (catalogEl) catalogEl.style.display = '';
-      } else {
-        timeline.style.display = '';
-        scrubber?.style.removeProperty('display');
-        if (catalogEl) catalogEl.style.display = 'none';
-      }
-    });
+  viewBtns.forEach((btn) => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view || 'timeline'));
   });
+
+  // --- 7. Restore state from URL params ---
+  const initParams = new URLSearchParams(location.search);
+  const initWorld = initParams.get('world') || 'all';
+  const initView = initParams.get('view') || 'timeline';
+
+  if (initWorld !== 'all') {
+    worldTabs.forEach(t => {
+      t.classList.toggle('active', t.dataset.world === initWorld);
+    });
+    applyWorldFilter(initWorld);
+  }
+
+  if (initView === 'catalog') {
+    switchView('catalog');
+  }
+
 </script>

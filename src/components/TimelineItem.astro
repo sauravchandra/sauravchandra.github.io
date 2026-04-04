@@ -1,4 +1,6 @@
 ---
+import { worldLabels } from '../config';
+
 export interface TimelineEntry {
   title: string;
   description?: string;
@@ -18,17 +20,15 @@ interface Props {
 
 const { item } = Astro.props;
 
-const worldLabels: Record<string, string> = {
-  tech: 'Tech', film: 'Film', music: 'Music', writing: 'Writing', travel: 'Travel',
-};
-
 const sourceLabels: Record<string, string> = {
-  post: '', youtube: 'YouTube', letterboxd: 'Letterboxd', carousel: '',
+  post: 'Blog', youtube: 'YouTube', letterboxd: 'Letterboxd', photo: 'Photo',
   substack: 'Substack', medium: 'Medium', github: 'GitHub',
-  soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Photos',
+  soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Gallery',
 };
 
-const dateStr = item.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+const dateStr = item.date.getFullYear() > 2000
+  ? item.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  : '';
 
 function starString(rating: number): string {
   const full = Math.floor(rating);
@@ -51,8 +51,17 @@ function ytEmbedUrl(videoId: string) {
   return `https://www.youtube.com/embed/${videoId}?${params}`;
 }
 
+const ctaLabels: Record<string, string> = {
+  post: 'Read post', youtube: 'Watch on YouTube', photo: 'View photo',
+  letterboxd: 'View on Letterboxd', github: 'View on GitHub',
+  spotify: 'Listen on Spotify', soundcloud: 'Listen on SoundCloud',
+  substack: 'Read on Substack', medium: 'Read on Medium', gallery: 'View gallery',
+};
+
 const worldColor = `var(--${item.world})`;
 const slideId = item.meta?.slideId || '';
+const linkTarget = item.external ? '_blank' : undefined;
+const linkRel = item.external ? 'noopener noreferrer' : undefined;
 ---
 
 <div class:list={['tl-slide', `slide-${item.source}`]} data-world={item.world} data-source={item.source} data-date={item.date.toISOString()} id={slideId}>
@@ -60,7 +69,7 @@ const slideId = item.meta?.slideId || '';
   {/* ---- YouTube Video ---- */}
   {item.source === 'youtube' && item.meta?.videoId && (
     <div class="slide-video" data-video-id={item.meta.videoId}>
-      <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen />
+      <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen title={item.title} />
     </div>
     <button class="slide-mute-btn" aria-label="Unmute">
       <svg class="icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -74,23 +83,26 @@ const slideId = item.meta?.slideId || '';
       <div class="slide-meta">
         <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
         <span class="slide-source">{sourceLabels[item.source]}</span>
-        <span class="slide-date">{dateStr}</span>
+        {dateStr && <span class="slide-date">{dateStr}</span>}
       </div>
-      <h2 class="slide-title">{item.title}</h2>
-      <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Watch on YouTube &rarr;</a>
+      <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
+      <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
     </div>
   )}
 
   {/* ---- Carousel Image ---- */}
-  {item.source === 'carousel' && item.image && (
+  {item.source === 'photo' && item.image && (
     <div class="slide-bg">
       <img src={item.image} alt={item.title} loading="lazy" />
     </div>
     <div class="slide-overlay">
       <div class="slide-meta">
-        <span class="slide-date">{dateStr}</span>
+        <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
+        <span class="slide-source">{sourceLabels[item.source]}</span>
+        {dateStr && <span class="slide-date">{dateStr}</span>}
       </div>
-      <h2 class="slide-title">{item.title}</h2>
+      <a href={item.url} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
+      <a href={item.url} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
     </div>
   )}
 
@@ -109,9 +121,10 @@ const slideId = item.meta?.slideId || '';
       <div class="slide-overlay slide-overlay-post">
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
-          <span class="slide-date">{dateStr}</span>
+          <span class="slide-source">{sourceLabels[item.source]}</span>
+          {dateStr && <span class="slide-date">{dateStr}</span>}
         </div>
-        <a href={item.url} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.htmlContent && (
           <div class="slide-prose">
             {item.htmlContent.split('\n').filter(Boolean).map((para: string) => (
@@ -120,7 +133,7 @@ const slideId = item.meta?.slideId || '';
           </div>
         )}
         {!item.htmlContent && item.description && <p class="slide-desc">{item.description}</p>}
-        <a href={item.url} class="slide-cta">Read full post &rarr;</a>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
       </div>
     </Fragment>
   )}
@@ -141,14 +154,14 @@ const slideId = item.meta?.slideId || '';
         )}
         <div class="slide-letterboxd-info">
           {item.meta?.rating && <div class="slide-rating">{starString(item.meta.rating)}</div>}
-          <h2 class="slide-title">{item.title}</h2>
+          <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
           <div class="slide-meta">
             <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
             <span class="slide-source">{sourceLabels[item.source]}</span>
-            <span class="slide-date">{dateStr}</span>
+            {dateStr && <span class="slide-date">{dateStr}</span>}
           </div>
           {item.description && <p class="slide-review">{item.description}</p>}
-          <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on Letterboxd &rarr;</a>
+          <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
         </div>
       </div>
     </Fragment>
@@ -166,9 +179,9 @@ const slideId = item.meta?.slideId || '';
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-source">{sourceLabels[item.source]}</span>
-          <span class="slide-date">{dateStr}</span>
+          {dateStr && <span class="slide-date">{dateStr}</span>}
         </div>
-        <h2 class="slide-title">{item.title}</h2>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.description && <p class="slide-desc">{item.description}</p>}
         <div class="slide-meta" style="margin-top: 0.75rem">
           {item.meta?.language && (
@@ -179,7 +192,7 @@ const slideId = item.meta?.slideId || '';
           )}
           {item.meta?.stars > 0 && <span class="slide-stars">{'\u2606'} {item.meta.stars}</span>}
         </div>
-        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on GitHub &rarr;</a>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
       </div>
     </Fragment>
   )}
@@ -196,17 +209,20 @@ const slideId = item.meta?.slideId || '';
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-source">{sourceLabels[item.source]}</span>
+          {dateStr && <span class="slide-date">{dateStr}</span>}
         </div>
-        <h2 class="slide-title">{item.title}</h2>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.meta?.embedUrl && (
           <div class="slide-spotify-embed">
             <iframe
               src={item.meta.embedUrl}
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
               loading="lazy"
+              title={item.title}
             />
           </div>
         )}
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
       </div>
     </Fragment>
   )}
@@ -223,9 +239,9 @@ const slideId = item.meta?.slideId || '';
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-source">{sourceLabels[item.source]}</span>
-          <span class="slide-date">{dateStr}</span>
+          {dateStr && <span class="slide-date">{dateStr}</span>}
         </div>
-        <h2 class="slide-title">{item.title}</h2>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.meta?.embedUrl && (
           <div class="slide-soundcloud-embed">
             <iframe
@@ -234,10 +250,11 @@ const slideId = item.meta?.slideId || '';
               allow="autoplay"
               src={item.meta.embedUrl}
               loading="lazy"
+              title={item.title}
             />
           </div>
         )}
-        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">View on SoundCloud &rarr;</a>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
       </div>
     </Fragment>
   )}
@@ -245,16 +262,22 @@ const slideId = item.meta?.slideId || '';
   {/* ---- Substack / Medium Article ---- */}
   {(item.source === 'substack' || item.source === 'medium') && (
     <Fragment>
-      <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}></div>
-      <div class="slide-center slide-center-article">
+      {item.image ? (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" />
+        </div>
+      ) : (
+        <div class="slide-bg" style={`background: linear-gradient(135deg, ${worldColor} 0%, #111 100%);`}></div>
+      )}
+      <div class="slide-overlay slide-overlay-post">
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-source">{sourceLabels[item.source]}</span>
-          <span class="slide-date">{dateStr}</span>
+          {dateStr && <span class="slide-date">{dateStr}</span>}
         </div>
-        <h2 class="slide-title">{item.title}</h2>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.description && <p class="slide-excerpt">{item.description}</p>}
-        <a href={item.url} target="_blank" rel="noopener noreferrer" class="slide-cta">Read full article on {sourceLabels[item.source]} &rarr;</a>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
       </div>
     </Fragment>
   )}
@@ -278,15 +301,14 @@ const slideId = item.meta?.slideId || '';
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-source">{sourceLabels[item.source]}</span>
-          <span class="slide-date">{dateStr}</span>
+          {dateStr && <span class="slide-date">{dateStr}</span>}
         </div>
-        <h2 class="slide-title">{item.title}</h2>
+        <a href={item.url} target={linkTarget} rel={linkRel} class="slide-title-link"><h2 class="slide-title">{item.title}</h2></a>
         {item.description && <p class="slide-desc">{item.description}</p>}
-        {item.meta?.photos && item.meta.photos.length > 9 && (
+        {item.meta?.photos && item.meta.photos.length > 9 ? (
           <a href={item.url} class="slide-cta">+{item.meta.photos.length - 9} more photos &rarr;</a>
-        )}
-        {(!item.meta?.photos || item.meta.photos.length <= 9) && (
-          <a href={item.url} class="slide-cta">View full gallery &rarr;</a>
+        ) : (
+          <a href={item.url} class="slide-cta">{ctaLabels[item.source]} &rarr;</a>
         )}
       </div>
     </Fragment>

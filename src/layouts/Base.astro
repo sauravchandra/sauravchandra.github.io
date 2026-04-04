@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import { config } from '../config';
 
 interface Props {
   title?: string;
@@ -10,8 +11,8 @@ interface Props {
 }
 
 const {
-  title = 'Saurav Chandra',
-  description = 'A life portfolio — tech, film, music, writing, travel.',
+  title = config.name,
+  description = config.tagline,
   isTimeline = false,
 } = Astro.props;
 ---
@@ -26,14 +27,14 @@ const {
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>" />
+  <link rel="icon" href={config.favicon || "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9670;</text></svg>"} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body class:list={[{ 'page-subpage': !isTimeline }]}>
   {isTimeline ? (
-    <Nav />
+    <Nav isTimeline />
     <main>
       <slot />
     </main>
@@ -43,6 +44,19 @@ const {
       <slot />
     </main>
     <Footer />
+  )}
+  {!isTimeline && (
+    <script>
+      document.querySelectorAll<HTMLAnchorElement>('.entry-back').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          const ref = document.referrer;
+          if (ref && new URL(ref).origin === location.origin) {
+            e.preventDefault();
+            history.back();
+          }
+        });
+      });
+    </script>
   )}
 </body>
 </html>

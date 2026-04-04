@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { config } from '../../config';
+
+export async function getStaticPaths() {
+  const photos = await getCollection('photos');
+  return photos.map((p) => ({
+    params: { slug: p.id },
+    props: { photo: p },
+  }));
+}
+
+const { photo } = Astro.props;
+const { caption, date, image } = photo.data;
+const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<Base title={`${caption} — ${config.name}`} description={caption}>
+  <article class="entry">
+    <div class="container">
+      <header class="entry-header">
+        <a href="/" class="entry-back">&larr; Back</a>
+        <time datetime={date.toISOString()}>{dateStr}</time>
+        <h1>{caption}</h1>
+      </header>
+
+      <div class="photo-full">
+        <img src={image} alt={caption} />
+      </div>
+    </div>
+  </article>
+</Base>

@@ -7,12 +7,8 @@ interface Props {
 
 const { item } = Astro.props;
 
-const worldLabels: Record<string, string> = {
-  tech: 'Tech', film: 'Film', music: 'Music', writing: 'Writing', travel: 'Travel',
-};
-
 const sourceLabels: Record<string, string> = {
-  post: 'Blog', youtube: 'YouTube', letterboxd: 'Letterboxd', carousel: 'Photo',
+  post: 'Blog', youtube: 'YouTube', letterboxd: 'Letterboxd', photo: 'Photo',
   substack: 'Substack', medium: 'Medium', github: 'GitHub',
   soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Gallery',
 };
@@ -24,7 +20,7 @@ const dateStr = item.date.getFullYear() > 2000
 const langColors: Record<string, string> = {
   JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
   Go: '#00ADD8', Rust: '#dea584', Java: '#b07219', HTML: '#e34c26',
-  CSS: '#563d7c', Shell: '#89e051', Ruby: '#701516',
+  CSS: '#563d7c', Shell: '#89e051', Ruby: '#701516', C: '#555555',
 };
 
 function starString(rating: number): string {
@@ -33,13 +29,12 @@ function starString(rating: number): string {
   return '\u2605'.repeat(full) + (half ? '\u00BD' : '');
 }
 
-const href = item.external ? item.url : item.url;
 const target = item.external ? '_blank' : undefined;
 ---
 
 <a class:list={['catalog-card', `catalog-card-${item.source}`]}
    data-world={item.world} data-source={item.source}
-   href={href} target={target} rel={item.external ? 'noopener noreferrer' : undefined}>
+   href={item.url} target={target} rel={item.external ? 'noopener noreferrer' : undefined}>
 
   {item.image && !['spotify', 'soundcloud'].includes(item.source) && (
     <div class="card-image">

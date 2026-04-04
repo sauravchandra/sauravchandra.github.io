@@ -1,9 +1,11 @@
 ---
+import { config } from '../config';
+
 const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
   <div class="container">
-    <p class="footer-credit">&copy; {year} Saurav Chandra</p>
+    <p class="footer-credit">&copy; {year} {config.name}</p>
   </div>
 </footer>

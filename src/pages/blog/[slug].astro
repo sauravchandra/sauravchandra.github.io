@@ -1,17 +1,10 @@
 ---
-import Base from '../layouts/Base.astro';
+import Base from '../../layouts/Base.astro';
 import { getCollection, render } from 'astro:content';
-
-const worldLabels: Record<string, string> = {
-  tech: 'Tech',
-  film: 'Film',
-  music: 'Music',
-  writing: 'Writing',
-  travel: 'Travel',
-};
+import { config } from '../../config';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('posts');
+  const posts = await getCollection('posts', ({ data }) => !data.draft);
   return posts.map((post) => ({
     params: { slug: post.id },
     props: { post },
@@ -20,14 +13,15 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+const dateStr = post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
-<Base title={`${post.data.title} — Saurav Chandra`} description={post.data.description}>
-  <article class="entry" style={`--accent: var(--${post.data.world})`}>
+<Base title={`${post.data.title} — ${config.name}`} description={post.data.description}>
+  <article class="entry">
     <div class="container">
       <header class="entry-header">
-        <a href="/" class="entry-back" onclick="if(history.length>1){event.preventDefault();history.back()}">&larr; Back</a>
-        <time>{post.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+        <a href="/" class="entry-back">&larr; Back</a>
+        <time datetime={post.data.date.toISOString()}>{dateStr}</time>
         <h1>{post.data.title}</h1>
         {post.data.tags && (
           <div class="entry-tags">

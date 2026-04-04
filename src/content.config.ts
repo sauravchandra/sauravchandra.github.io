@@ -1,18 +1,18 @@
-import 'dotenv/config';
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { config, worlds, resolveHandle, resolveUrls } from './config';
 
-const CONFIG = {
-  youtube: 'UCa7NBlOhfj9lXS3p4uZ6Wfg',
-  letterboxd: 'sauravchandra',
-  substack: 'sauravchandra',
-  medium: 'sauravchandra123',
-  github: 'sauravchandra',
-  soundcloud: 'sauravchandra',
-  spotify: 'sauravchandra',
-};
+const worldSlugs = worlds.map((w) => w.slug) as [string, ...string[]];
 
-const worlds = ['tech', 'film', 'music', 'writing', 'travel'] as const;
+function slugToTitle(slug: string): string {
+  return slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
+const GITHUB_PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=800&fit=crop&q=80';
 
 function xmlText(block: string, tag: string): string | undefined {
   return block.match(new RegExp(`<${tag}>([^<]+)</${tag}>`))?.[1];
@@ -34,21 +34,25 @@ function makeId(str: string): string {
   return str.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 80);
 }
 
+// ---------------------------------------------------------------------------
+// Local content (markdown files)
+// ---------------------------------------------------------------------------
+
 const posts = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
   schema: z.object({
     title: z.string(),
     description: z.string(),
     date: z.coerce.date(),
-    world: z.enum(worlds),
+    world: z.enum(worldSlugs),
     cover: z.string().optional(),
     tags: z.array(z.string()).optional(),
     draft: z.boolean().default(false),
   }),
 });
 
-const carousel = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/carousel' }),
+const photos = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/photos' }),
   schema: z.object({
     caption: z.string(),
     date: z.coerce.date(),
@@ -67,82 +71,32 @@ const gallery = defineCollection({
   }),
 });
 
-async function fetchSpotifyViaAPI(): Promise<any[] | null> {
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  try {
-    const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-      },
-      body: 'grant_type=client_credentials',
-    });
-    if (!tokenRes.ok) return null;
-    const { access_token } = await tokenRes.json() as any;
-
-    const all: any[] = [];
-    let url: string | null = `https://api.spotify.com/v1/users/${CONFIG.spotify}/playlists?limit=50`;
-    while (url) {
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${access_token}` } });
-      if (!res.ok) return null;
-      const page = await res.json() as any;
-      for (const p of (page.items || [])) {
-        if (!p.public) continue;
-        all.push({
-          id: p.id,
-          name: p.name,
-          url: p.external_urls?.spotify || '',
-          embedUrl: `https://open.spotify.com/embed/playlist/${p.id}`,
-          image: p.images?.[0]?.url || '',
-        });
-      }
-      url = page.next;
-    }
-    return all.length ? all : null;
-  } catch { return null; }
-}
-
-async function fetchSpotifyViaScrape(): Promise<any[]> {
-  try {
-    const res = await fetch(`https://open.spotify.com/user/${CONFIG.spotify}`, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
-    });
-    if (!res.ok) return [];
-    const html = await res.text();
-    const scripts = [...html.matchAll(/<script[^>]*>(.*?)<\/script>/gs)]
-      .map(m => m[1]).filter(s => s.length > 500);
-
-    for (const raw of scripts) {
-      let decoded: string;
-      try { decoded = Buffer.from(raw, 'base64').toString('utf-8'); } catch { continue; }
-      let data: any;
-      try { data = JSON.parse(decoded); } catch { continue; }
-      const user = data?.entities?.items?.[`spotify:user:${CONFIG.spotify}`];
-      if (!user?.publicPlaylistsV2?.items) continue;
-      return user.publicPlaylistsV2.items
-        .filter((w: any) => w?.data?.uri)
-        .map((w: any) => {
-          const d = w.data;
-          const pid = d.uri.split(':').pop();
-          return {
-            id: pid,
-            name: d.name || 'Untitled',
-            url: `https://open.spotify.com/playlist/${pid}`,
-            embedUrl: `https://open.spotify.com/embed/playlist/${pid}`,
-            image: d.images?.items?.[0]?.sources?.[0]?.url || '',
-          };
-        });
-    }
-    return [];
-  } catch { return []; }
-}
+// ---------------------------------------------------------------------------
+// Spotify — URL-array only (oEmbed for each URL)
+// ---------------------------------------------------------------------------
 
 const spotify = defineCollection({
   loader: async () => {
-    return (await fetchSpotifyViaAPI()) ?? (await fetchSpotifyViaScrape());
+    const urls = resolveUrls(config.feeds.spotify);
+    if (!urls.length) return [];
+    const results = await Promise.all(urls.map(async (url) => {
+      try {
+        const res = await fetch(
+          `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
+        );
+        if (!res.ok) return null;
+        const data = await res.json() as any;
+        const embedUrl = url.replace('open.spotify.com/', 'open.spotify.com/embed/');
+        return {
+          id: makeId(url),
+          name: data.title || 'Spotify',
+          url,
+          embedUrl,
+          image: data.thumbnail_url || '',
+        };
+      } catch { return null; }
+    }));
+    return results.filter((r): r is NonNullable<typeof r> => r !== null);
   },
   schema: z.object({
     name: z.string(),
@@ -152,11 +106,51 @@ const spotify = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// YouTube — handle mode: resolve handle → channel ID → RSS; URL mode: parse video IDs
+// ---------------------------------------------------------------------------
+
+function parseYouTubeVideoId(url: string): string | undefined {
+  const m = url.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  return m?.[1];
+}
+
+async function resolveYouTubeChannelId(handle: string): Promise<string | undefined> {
+  if (handle.startsWith('UC') && handle.length === 24) return handle;
+  const slug = handle.startsWith('@') ? handle : `@${handle}`;
+  try {
+    const res = await fetch(`https://www.youtube.com/${slug}`);
+    if (!res.ok) return undefined;
+    const html = await res.text();
+    return html.match(/channel_id=([A-Za-z0-9_-]{24})/)?.[1];
+  } catch { return undefined; }
+}
+
 const youtube = defineCollection({
   loader: async () => {
+    const urls = resolveUrls(config.feeds.youtube);
+    if (urls.length) {
+      return urls
+        .map((url) => {
+          const videoId = parseYouTubeVideoId(url);
+          if (!videoId) return null;
+          return {
+            id: videoId,
+            videoId,
+            caption: '',
+            date: new Date().toISOString(),
+            thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+    }
+    const handle = resolveHandle(config.feeds.youtube);
+    if (!handle) return [];
+    const channelId = await resolveYouTubeChannelId(handle);
+    if (!channelId) return [];
     try {
       const res = await fetch(
-        `https://www.youtube.com/feeds/videos.xml?channel_id=${CONFIG.youtube}`
+        `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
       );
       if (!res.ok) return [];
       const xml = await res.text();
@@ -184,10 +178,28 @@ const youtube = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// Letterboxd — handle mode: RSS feed; URL mode: extract film title from slug
+// ---------------------------------------------------------------------------
+
 const letterboxd = defineCollection({
   loader: async () => {
+    const urls = resolveUrls(config.feeds.letterboxd);
+    if (urls.length) {
+      return urls.map((url) => {
+        const slug = url.replace(/\/$/, '').split('/').pop() || '';
+        return {
+          id: makeId(url),
+          filmTitle: slugToTitle(slug),
+          url,
+          date: new Date().toISOString(),
+        };
+      });
+    }
+    const handle = resolveHandle(config.feeds.letterboxd);
+    if (!handle) return [];
     try {
-      const res = await fetch(`https://letterboxd.com/${CONFIG.letterboxd}/rss/`);
+      const res = await fetch(`https://letterboxd.com/${handle}/rss/`);
       if (!res.ok) return [];
       const xml = await res.text();
       const entries: any[] = [];
@@ -205,7 +217,7 @@ const letterboxd = defineCollection({
         if (filmTitle && pubDate) {
           entries.push({
             id: makeId(link),
-            filmTitle, rating: rating ? parseFloat(rating) : undefined,
+            filmTitle, rating: rating && !isNaN(parseFloat(rating)) ? parseFloat(rating) : undefined,
             review: review || undefined, url: link, date: pubDate, poster,
           });
         }
@@ -223,10 +235,28 @@ const letterboxd = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// Substack — handle mode: RSS feed; URL mode: extract title from slug
+// ---------------------------------------------------------------------------
+
 const substackFeed = defineCollection({
   loader: async () => {
+    const urls = resolveUrls(config.feeds.substack);
+    if (urls.length) {
+      return urls.map((url) => {
+        const slug = url.replace(/\/$/, '').split('/').pop() || '';
+        return {
+          id: makeId(url),
+          title: slugToTitle(slug),
+          url,
+          date: new Date().toISOString(),
+        };
+      });
+    }
+    const handle = resolveHandle(config.feeds.substack);
+    if (!handle) return [];
     try {
-      const res = await fetch(`https://${CONFIG.substack}.substack.com/feed`);
+      const res = await fetch(`https://${handle}.substack.com/feed`);
       if (!res.ok) return [];
       const xml = await res.text();
       const entries: any[] = [];
@@ -256,10 +286,29 @@ const substackFeed = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// Medium — handle mode: RSS feed; URL mode: extract title from slug
+// ---------------------------------------------------------------------------
+
 const mediumFeed = defineCollection({
   loader: async () => {
+    const urls = resolveUrls(config.feeds.medium);
+    if (urls.length) {
+      return urls.map((url) => {
+        const slug = url.replace(/\/$/, '').split('/').pop() || '';
+        const cleaned = slug.replace(/-[a-f0-9]{10,}$/, '');
+        return {
+          id: makeId(url),
+          title: slugToTitle(cleaned),
+          url,
+          date: new Date().toISOString(),
+        };
+      });
+    }
+    const handle = resolveHandle(config.feeds.medium);
+    if (!handle) return [];
     try {
-      const res = await fetch(`https://medium.com/feed/@${CONFIG.medium}`);
+      const res = await fetch(`https://medium.com/feed/@${handle}`);
       if (!res.ok) return [];
       const xml = await res.text();
       const entries: any[] = [];
@@ -290,11 +339,48 @@ const mediumFeed = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// GitHub — handle mode: user repos API; URL mode: fetch individual repos
+// ---------------------------------------------------------------------------
+
+function parseGitHubRepo(url: string): { owner: string; repo: string } | undefined {
+  const m = url.match(/github\.com\/([^/]+)\/([^/?#]+)/);
+  return m ? { owner: m[1], repo: m[2] } : undefined;
+}
+
 const github = defineCollection({
   loader: async () => {
+    const urls = resolveUrls(config.feeds.github);
+    if (urls.length) {
+      const results = await Promise.all(urls.map(async (url) => {
+        const parsed = parseGitHubRepo(url);
+        if (!parsed) return null;
+        try {
+          const res = await fetch(
+            `https://api.github.com/repos/${parsed.owner}/${parsed.repo}`,
+            { headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'astro-build' } }
+          );
+          if (!res.ok) return null;
+          const r = await res.json() as any;
+          return {
+            id: r.name,
+            name: r.name,
+            description: r.description || '',
+            url: r.html_url,
+            language: r.language || '',
+            stars: r.stargazers_count,
+            date: r.pushed_at,
+            image: GITHUB_PLACEHOLDER_IMAGE,
+          };
+        } catch { return null; }
+      }));
+      return results.filter((r): r is NonNullable<typeof r> => r !== null);
+    }
+    const handle = resolveHandle(config.feeds.github);
+    if (!handle) return [];
     try {
       const res = await fetch(
-        `https://api.github.com/users/${CONFIG.github}/repos?sort=pushed&per_page=15`,
+        `https://api.github.com/users/${handle}/repos?sort=pushed&per_page=15`,
         { headers: { Accept: 'application/vnd.github.v3+json', 'User-Agent': 'astro-build' } }
       );
       if (!res.ok) return [];
@@ -309,7 +395,7 @@ const github = defineCollection({
           language: r.language || '',
           stars: r.stargazers_count,
           date: r.pushed_at,
-          image: `https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=800&fit=crop&q=80`,
+          image: GITHUB_PLACEHOLDER_IMAGE,
         }));
     } catch { return []; }
   },
@@ -324,26 +410,42 @@ const github = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+// SoundCloud — handle mode: oEmbed profile; URL mode: oEmbed per URL
+// ---------------------------------------------------------------------------
+
+async function resolveSoundCloudOembed(url: string): Promise<any | null> {
+  try {
+    const res = await fetch(
+      `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    const srcMatch = data.html?.match(/src="([^"]+)"/);
+    if (!srcMatch) return null;
+    return {
+      id: makeId(url),
+      trackTitle: data.title || 'SoundCloud',
+      url: data.author_url || url,
+      date: new Date().toISOString(),
+      artwork: data.thumbnail_url || '',
+      embedUrl: srcMatch[1],
+    };
+  } catch { return null; }
+}
+
 const soundcloud = defineCollection({
   loader: async () => {
-    try {
-      const profileUrl = `https://soundcloud.com/${CONFIG.soundcloud}`;
-      const oembed = await fetch(
-        `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(profileUrl)}`
-      );
-      if (!oembed.ok) return [];
-      const data = await oembed.json() as any;
-      const srcMatch = data.html?.match(/src="([^"]+)"/);
-      if (!srcMatch) return [];
-      return [{
-        id: 'soundcloud-profile',
-        trackTitle: data.author_name || 'SoundCloud',
-        url: data.author_url || profileUrl,
-        date: new Date().toISOString(),
-        artwork: data.thumbnail_url || '',
-        embedUrl: srcMatch[1],
-      }];
-    } catch { return []; }
+    const urls = resolveUrls(config.feeds.soundcloud);
+    if (urls.length) {
+      const results = await Promise.all(urls.map(resolveSoundCloudOembed));
+      return results.filter((r): r is NonNullable<typeof r> => r !== null);
+    }
+    const handle = resolveHandle(config.feeds.soundcloud);
+    if (!handle) return [];
+    const result = await resolveSoundCloudOembed(`https://soundcloud.com/${handle}`);
+    if (!result) return [];
+    return [{ ...result, id: 'soundcloud-profile', trackTitle: 'SoundCloud' }];
   },
   schema: z.object({
     trackTitle: z.string(),
@@ -354,7 +456,9 @@ const soundcloud = defineCollection({
   }),
 });
 
+// ---------------------------------------------------------------------------
+
 export const collections = {
-  posts, carousel, youtube, gallery, spotify,
+  posts, photos, youtube, gallery, spotify,
   letterboxd, substackFeed, mediumFeed, github, soundcloud,
 };

@@ -1,5 +1,5 @@
 {
-  "name": "sauravchandra",
+  "name": "life-portfolio",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -7,7 +7,6 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "astro": "^5",
-    "dotenv": "^17.4.0"
+    "astro": "^5"
   }
 }

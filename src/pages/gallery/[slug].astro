@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
+import { config } from '../../config';
 
 export async function getStaticPaths() {
   const galleries = await getCollection('gallery');
@@ -15,12 +16,12 @@ const { title, date, location, photos } = gallery.data;
 const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
-<Base title={`${title} — Saurav Chandra`} description={location}>
+<Base title={`${title} — ${config.name}`} description={location}>
   <article class="gallery-page">
     <div class="container">
       <header class="gallery-header">
-        <a href="/" class="entry-back" onclick="if(history.length>1){event.preventDefault();history.back()}">&larr; Back</a>
-        <time>{dateStr}</time>
+        <a href="/" class="entry-back">&larr; Back</a>
+        <time datetime={date.toISOString()}>{dateStr}</time>
         <h1>{title}</h1>
         <p class="gallery-location">{location}</p>
       </header>
