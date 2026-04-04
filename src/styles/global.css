@@ -483,11 +483,20 @@ img { max-width: 100%; display: block; }
   pointer-events: none;
 }
 
+.slide-youtube.yt-playing::after,
+.slide-video.yt-playing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
 .slide-youtube.yt-playing:hover .slide-overlay,
 .slide-youtube.yt-playing:hover .slide-mute-btn,
 .slide-video.yt-playing:hover .slide-overlay,
 .slide-video.yt-playing:hover .slide-mute-btn {
   opacity: 1;
+  z-index: 10;
 }
 
 .slide-youtube.yt-playing:hover .slide-overlay .slide-cta,
