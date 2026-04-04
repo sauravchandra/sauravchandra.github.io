@@ -1,7 +1,7 @@
 ---
 title: "It Is What It Is"
 description: "It Is What It Is"
-date: 2026-04-04
+date: 2026-04-04T18:57:47Z
 world: writing
 tags: ["life"]
 ---

@@ -132,7 +132,7 @@ jobs:
             // ---- CREATE / UPDATE — only for open issues ----
             if (issue.state !== 'open' || !dir) return;
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString();
 
             function field(heading) {
               const esc = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
