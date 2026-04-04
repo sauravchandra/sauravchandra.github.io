@@ -60,6 +60,18 @@ UNSPLASH_ACCESS_KEY=...
 
 - **Unsplash** — fills in random cover images for feed items that don't have one. Without it, static fallback images are used. Get a key at [unsplash.com/developers](https://unsplash.com/developers).
 
+### Publishing
+
+Manage content using GitHub Issues.
+
+| Action | How |
+|--------|-----|
+| **Create** | New Issue → pick template (Post / Photo / Gallery) → fill form → submit |
+| **Update** | Edit the issue body → reopen it |
+| **Delete** | Add the `delete` label to the issue |
+
+A GitHub Action handles the rest — commits the file, deploys, and closes the issue with a link. Only the repo owner and collaborators can publish. First push creates the required labels automatically.
+
 ### Content
 
 Local content lives in `src/content/`:

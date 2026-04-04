@@ -57,6 +57,7 @@ const photos = defineCollection({
     caption: z.string(),
     date: z.coerce.date(),
     image: z.string(),
+    tags: z.array(z.string()).optional(),
   }),
 });
 
@@ -64,10 +65,12 @@ const gallery = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/gallery' }),
   schema: z.object({
     title: z.string(),
+    description: z.string().optional(),
     date: z.coerce.date(),
     location: z.string(),
     cover: z.string(),
     photos: z.array(z.string()),
+    tags: z.array(z.string()).optional(),
   }),
 });
 
