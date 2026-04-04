@@ -130,10 +130,10 @@ jobs:
 
             function field(heading) {
               const esc = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const m = body.match(new RegExp(`### ${esc}\\s*\\n\\n([\\s\\S]*?)(?=\\n### |$)`));
+              const m = body.match(new RegExp(`### ${esc}\\s*\\n([\\s\\S]*?)(?=\\n### |$)`));
               if (!m) return '';
-              const v = m[1].trim();
-              return v === '_No response_' ? '' : v;
+              const v = m[1].replace(/<!--[\s\S]*?-->/g, '').trim();
+              return (v === '_No response_' || v === '') ? '' : v;
             }
 
             function findImages(text) {
