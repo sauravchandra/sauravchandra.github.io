@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import TimelineItem from '../components/TimelineItem.astro';
+import CatalogCard from '../components/CatalogCard.astro';
 import type { TimelineEntry } from '../components/TimelineItem.astro';
 import { getCollection } from 'astro:content';
 
@@ -79,7 +80,7 @@ for (const s of ssEntries) {
   feed.push({
     title: s.data.title, description: s.data.excerpt,
     date: s.data.date, world: 'writing', source: 'substack',
-    url: s.data.url, external: true,
+    url: s.data.url, external: true, image: s.data.image,
     meta: { slideId: uniqueSlug(s.data.title, 'ss') },
   });
 }
@@ -89,7 +90,7 @@ for (const m of mdEntries) {
   feed.push({
     title: m.data.title, description: m.data.excerpt,
     date: m.data.date, world: 'writing', source: 'medium',
-    url: m.data.url, external: true,
+    url: m.data.url, external: true, image: m.data.image,
     meta: { slideId: uniqueSlug(m.data.title, 'md') },
   });
 }
@@ -99,7 +100,7 @@ for (const r of ghRepos) {
   feed.push({
     title: r.data.name, description: r.data.description,
     date: r.data.date, world: 'tech', source: 'github',
-    url: r.data.url, external: true,
+    url: r.data.url, external: true, image: r.data.image,
     meta: { language: r.data.language, stars: r.data.stars, slideId: uniqueSlug(r.data.name, 'gh') },
   });
 }
@@ -110,17 +111,17 @@ for (const t of scTracks) {
     title: t.data.trackTitle, date: t.data.date, world: 'music',
     source: 'soundcloud', url: t.data.url, external: true,
     image: t.data.artwork,
-    meta: { slideId: uniqueSlug(t.data.trackTitle, 'sc'), embedUrl: t.data.embedUrl },
+    meta: { slideId: uniqueSlug(t.data.trackTitle, 'sc'), embedUrl: t.data.embedUrl, evergreen: true },
   });
 }
 
 const spEntries = await getCollection('spotify');
 for (const sp of spEntries) {
   feed.push({
-    title: sp.data.name, date: new Date(), world: 'music',
+    title: sp.data.name, date: new Date('2000-01-01'), world: 'music',
     source: 'spotify', url: sp.data.url, external: true,
     image: sp.data.image,
-    meta: { embedUrl: sp.data.embedUrl, slideId: uniqueSlug(sp.data.name, 'sp') },
+    meta: { embedUrl: sp.data.embedUrl, slideId: uniqueSlug(sp.data.name, 'sp'), evergreen: true },
   });
 }
 
@@ -134,7 +135,62 @@ for (const g of galEntries) {
   });
 }
 
-feed.sort((a, b) => b.date.getTime() - a.date.getTime());
+const UNSPLASH_KEY = import.meta.env.UNSPLASH_ACCESS_KEY;
+const worldQueries: Record<string, string> = {
+  tech: 'technology code programming', film: 'cinema film camera',
+  music: 'music instruments concert', writing: 'books writing journal',
+  travel: 'travel landscape adventure',
+};
+
+const needsByWorld: Record<string, TimelineEntry[]> = {};
+for (const item of feed) {
+  if (!item.image) (needsByWorld[item.world] ??= []).push(item);
+}
+
+if (UNSPLASH_KEY && Object.keys(needsByWorld).length) {
+  const fetches = Object.entries(needsByWorld).map(async ([world, items]) => {
+    try {
+      const count = Math.min(items.length, 30);
+      const res = await fetch(
+        `https://api.unsplash.com/photos/random?query=${encodeURIComponent(worldQueries[world] || world)}&count=${count}&orientation=landscape`,
+        { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } },
+      );
+      if (!res.ok) return;
+      const photos: any[] = await res.json();
+      items.forEach((item, i) => {
+        const photo = photos[i % photos.length];
+        item.image = `${photo.urls.raw}&w=1200&h=800&fit=crop&q=80`;
+      });
+    } catch { /* fall through to static fallback */ }
+  });
+  await Promise.all(fetches);
+}
+
+const staticFallback: Record<string, string[]> = {
+  tech:    ['photo-1518770660439-4636190af475','photo-1461749280684-dccba630e2f6','photo-1488590528505-98d2b5aba04b','photo-1550751827-4bd374c3f58b','photo-1517694712202-14dd9538aa97','photo-1504639725590-34d0984388bd'],
+  film:    ['photo-1485846234645-a62644f84728','photo-1478720568477-152d9b164e26','photo-1440404653325-ab127d49abc1','photo-1536440136628-849c177e76a1','photo-1489599849927-2ee91cede3ba','photo-1595769816263-9b910be24d5f'],
+  music:   ['photo-1511379938547-c1f69419868d','photo-1493225457124-a3eb161ffa5f','photo-1514320291840-2e0a9bf2a9ae','photo-1510915361894-db8b60106cb1','photo-1459749411175-04bf5292ceea','photo-1470225620780-dba8ba36b745'],
+  writing: ['photo-1455390582262-044cdead277a','photo-1457369804613-52c61a468e7d','photo-1471107340929-a87cd0f5b5f3','photo-1506880018603-83d5b814b5a6','photo-1432821596592-e2c18b78144f','photo-1516414447565-b14be0adf13e'],
+  travel:  ['photo-1488646953014-85cb44e25828','photo-1469854523086-cc02fe5d8800','photo-1476514525535-07fb3b4ae5f1','photo-1507525428034-b723cf961d3e','photo-1502920917128-1aa500764cbd','photo-1500835556837-99ac94a94552'],
+};
+function titleHash(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+for (const item of feed) {
+  if (!item.image) {
+    const pool = staticFallback[item.world] || staticFallback.tech;
+    item.image = `https://images.unsplash.com/${pool[titleHash(item.title) % pool.length]}?w=1200&h=800&fit=crop&q=80`;
+  }
+}
+
+feed.sort((a, b) => {
+  const aEver = a.meta?.evergreen ? 1 : 0;
+  const bEver = b.meta?.evergreen ? 1 : 0;
+  if (aEver !== bEver) return aEver - bEver;
+  return b.date.getTime() - a.date.getTime();
+});
 ---
 
 <Base isTimeline>
@@ -146,6 +202,12 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
         <p class="slide-empty">Nothing here yet.</p>
       </div>
     )}
+  </div>
+
+  <div class="catalog" id="catalog" style="display:none">
+    <div class="catalog-grid" id="catalogGrid">
+      {feed.map((item) => <CatalogCard item={item} />)}
+    </div>
   </div>
 
   <div class="scrubber" id="scrubber">
@@ -252,30 +314,29 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
     });
   }
 
-  // --- 2. Filter + Counter ---
-  const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
+  // --- 2. Shared World Tabs (filter both views) ---
+  const worldTabs = document.querySelectorAll<HTMLButtonElement>('.catalog-tab');
   const slides = document.querySelectorAll<HTMLElement>('.tl-slide');
-  const counter = document.getElementById('navCounter');
+  const catalogCards = document.querySelectorAll<HTMLElement>('.catalog-card');
+  let currentWorld = 'all';
 
-  function updateCounter() {
-    const visible = document.querySelectorAll<HTMLElement>('.tl-slide:not([style*="display: none"])');
-    if (counter) counter.textContent = `${visible.length}`;
+  function applyWorldFilter(world: string) {
+    currentWorld = world;
+    slides.forEach((slide) => {
+      slide.style.display = (world === 'all' || slide.dataset.world === world) ? '' : 'none';
+    });
+    catalogCards.forEach((card) => {
+      card.style.display = (world === 'all' || card.dataset.world === world) ? '' : 'none';
+    });
   }
 
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      buttons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const filter = btn.dataset.filter;
-      slides.forEach((slide) => {
-        const show = filter === 'all' || slide.dataset.world === filter;
-        slide.style.display = show ? '' : 'none';
-      });
-      updateCounter();
+  worldTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      worldTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      applyWorldFilter(tab.dataset.world || 'all');
     });
   });
-
-  updateCounter();
 
   // --- 3. Date Scrubber ---
   const scrubber = document.getElementById('scrubber');
@@ -443,4 +504,26 @@ feed.sort((a, b) => b.date.getTime() - a.date.getTime());
       });
     }
   }
+
+  // --- 6. View Toggle (Timeline / Catalog) ---
+  const viewBtns = document.querySelectorAll<HTMLButtonElement>('.view-btn');
+  const catalogEl = document.getElementById('catalog');
+
+  viewBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      viewBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.view;
+
+      if (view === 'catalog') {
+        timeline.style.display = 'none';
+        scrubber?.style.setProperty('display', 'none');
+        if (catalogEl) catalogEl.style.display = '';
+      } else {
+        timeline.style.display = '';
+        scrubber?.style.removeProperty('display');
+        if (catalogEl) catalogEl.style.display = 'none';
+      }
+    });
+  });
 </script>

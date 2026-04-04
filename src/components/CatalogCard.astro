@@ -1,0 +1,94 @@
+---
+import type { TimelineEntry } from './TimelineItem.astro';
+
+interface Props {
+  item: TimelineEntry;
+}
+
+const { item } = Astro.props;
+
+const worldLabels: Record<string, string> = {
+  tech: 'Tech', film: 'Film', music: 'Music', writing: 'Writing', travel: 'Travel',
+};
+
+const sourceLabels: Record<string, string> = {
+  post: 'Blog', youtube: 'YouTube', letterboxd: 'Letterboxd', carousel: 'Photo',
+  substack: 'Substack', medium: 'Medium', github: 'GitHub',
+  soundcloud: 'SoundCloud', spotify: 'Spotify', gallery: 'Gallery',
+};
+
+const dateStr = item.date.getFullYear() > 2000
+  ? item.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  : '';
+
+const langColors: Record<string, string> = {
+  JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
+  Go: '#00ADD8', Rust: '#dea584', Java: '#b07219', HTML: '#e34c26',
+  CSS: '#563d7c', Shell: '#89e051', Ruby: '#701516',
+};
+
+function starString(rating: number): string {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  return '\u2605'.repeat(full) + (half ? '\u00BD' : '');
+}
+
+const href = item.external ? item.url : item.url;
+const target = item.external ? '_blank' : undefined;
+---
+
+<a class:list={['catalog-card', `catalog-card-${item.source}`]}
+   data-world={item.world} data-source={item.source}
+   href={href} target={target} rel={item.external ? 'noopener noreferrer' : undefined}>
+
+  {item.image && !['spotify', 'soundcloud'].includes(item.source) && (
+    <div class="card-image">
+      <img src={item.image} alt={item.title} loading="lazy" />
+    </div>
+  )}
+
+  {item.source === 'spotify' && item.image && (
+    <div class="card-image card-image-square">
+      <img src={item.image} alt={item.title} loading="lazy" />
+    </div>
+  )}
+
+  {item.source === 'soundcloud' && item.image && (
+    <div class="card-image card-image-square">
+      <img src={item.image} alt={item.title} loading="lazy" />
+    </div>
+  )}
+
+  <div class="card-body">
+    <div class="card-meta">
+      <span class="card-source">{sourceLabels[item.source]}</span>
+      {dateStr && <span class="card-date">{dateStr}</span>}
+    </div>
+
+    <h3 class="card-title">{item.title}</h3>
+
+    {item.source === 'letterboxd' && item.meta?.rating && (
+      <div class="card-rating">{starString(item.meta.rating)}</div>
+    )}
+
+    {item.description && (
+      <p class="card-desc">{
+        item.description.length > 120
+          ? item.description.slice(0, 120) + '…'
+          : item.description
+      }</p>
+    )}
+
+    {item.source === 'github' && item.meta?.language && (
+      <div class="card-lang">
+        <span class="card-lang-dot" style={`background: ${langColors[item.meta.language] || '#888'}`}></span>
+        {item.meta.language}
+        {item.meta?.stars > 0 && <span class="card-stars">{'\u2606'} {item.meta.stars}</span>}
+      </div>
+    )}
+
+    {item.source === 'gallery' && item.meta?.photos && (
+      <span class="card-photo-count">{item.meta.photos.length} photos</span>
+    )}
+  </div>
+</a>

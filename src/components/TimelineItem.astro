@@ -157,7 +157,12 @@ const slideId = item.meta?.slideId || '';
   {/* ---- GitHub Repo ---- */}
   {item.source === 'github' && (
     <Fragment>
-      <div class="slide-center">
+      {item.image && (
+        <div class="slide-bg">
+          <img src={item.image} alt={item.title} loading="lazy" />
+        </div>
+      )}
+      <div class="slide-overlay slide-overlay-post">
         <div class="slide-meta">
           <span class="slide-world" style={`--accent: ${worldColor}`}>{worldLabels[item.world]}</span>
           <span class="slide-source">{sourceLabels[item.source]}</span>

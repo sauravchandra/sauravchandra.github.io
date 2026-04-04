@@ -26,6 +26,10 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, '').trim();
 }
 
+function firstImg(html: string): string | undefined {
+  return html.match(/<img[^>]+src=["']([^"']+)["']/)?.[1];
+}
+
 function makeId(str: string): string {
   return str.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 80);
 }
@@ -235,8 +239,9 @@ const substackFeed = defineCollection({
         const pubDate = xmlText(b, 'pubDate');
         const desc = xmlCdata(b, 'description') || xmlText(b, 'description') || '';
         const excerpt = stripHtml(desc).slice(0, 500);
+        const image = firstImg(desc);
         if (title && pubDate) {
-          entries.push({ id: makeId(link), title, excerpt: excerpt || undefined, url: link, date: pubDate });
+          entries.push({ id: makeId(link), title, excerpt: excerpt || undefined, url: link, date: pubDate, image });
         }
       }
       return entries;
@@ -247,6 +252,7 @@ const substackFeed = defineCollection({
     excerpt: z.string().optional(),
     url: z.string(),
     date: z.coerce.date(),
+    image: z.string().optional(),
   }),
 });
 
@@ -265,9 +271,11 @@ const mediumFeed = defineCollection({
         const link = xmlText(b, 'link') || '';
         const pubDate = xmlText(b, 'pubDate');
         const desc = xmlCdata(b, 'description') || xmlText(b, 'description') || '';
+        const contentEncoded = xmlCdata(b, 'content:encoded') || '';
         const excerpt = stripHtml(desc).slice(0, 500);
+        const image = firstImg(contentEncoded) || firstImg(desc);
         if (title && pubDate) {
-          entries.push({ id: makeId(link), title, excerpt: excerpt || undefined, url: link, date: pubDate });
+          entries.push({ id: makeId(link), title, excerpt: excerpt || undefined, url: link, date: pubDate, image });
         }
       }
       return entries;
@@ -278,6 +286,7 @@ const mediumFeed = defineCollection({
     excerpt: z.string().optional(),
     url: z.string(),
     date: z.coerce.date(),
+    image: z.string().optional(),
   }),
 });
 
@@ -300,6 +309,7 @@ const github = defineCollection({
           language: r.language || '',
           stars: r.stargazers_count,
           date: r.pushed_at,
+          image: `https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&h=800&fit=crop&q=80`,
         }));
     } catch { return []; }
   },
@@ -310,6 +320,7 @@ const github = defineCollection({
     language: z.string(),
     stars: z.number(),
     date: z.coerce.date(),
+    image: z.string().optional(),
   }),
 });
 
