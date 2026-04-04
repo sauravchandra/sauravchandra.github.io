@@ -239,7 +239,7 @@ feed.sort((a, b) => {
   if (!timeline) throw new Error('missing timeline');
 
   // --- 1. Video Observer: load/unload iframe on snap ---
-  const videoSlides = document.querySelectorAll<HTMLElement>('.slide-video');
+  const videoSlides = document.querySelectorAll<HTMLElement>('.slide-player');
 
   const ytHideTimers = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
 
@@ -262,7 +262,7 @@ feed.sort((a, b) => {
     });
   }, { root: timeline, threshold: 0.5 });
 
-  document.querySelectorAll<HTMLElement>('.slide-youtube').forEach((slide) => {
+  document.querySelectorAll<HTMLElement>('.slide-youtube, .slide-video').forEach((slide) => {
     slide.addEventListener('click', () => {
       if (!slide.classList.contains('yt-playing')) return;
       slide.classList.remove('yt-playing');

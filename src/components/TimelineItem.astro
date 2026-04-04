@@ -68,7 +68,7 @@ const linkRel = item.external ? 'noopener noreferrer' : undefined;
 
   {/* ---- YouTube / Video ---- */}
   {(item.source === 'youtube' || item.source === 'video') && item.meta?.videoId && (
-    <div class="slide-video" data-video-id={item.meta.videoId}>
+    <div class="slide-player" data-video-id={item.meta.videoId}>
       <iframe data-src={ytEmbedUrl(item.meta.videoId)} allow="autoplay; encrypted-media" allowfullscreen title={item.title} />
     </div>
     <button class="slide-mute-btn" aria-label="Unmute">

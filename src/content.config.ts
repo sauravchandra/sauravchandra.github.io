@@ -403,7 +403,7 @@ const github = defineCollection({
       if (!res.ok) return [];
       const repos: any[] = await res.json();
       return repos
-        .filter((r: any) => !r.fork && !r.archived)
+        .filter((r: any) => !r.fork && !r.archived && r.name !== `${handle}.github.io`)
         .map((r: any) => ({
           id: r.name,
           name: r.name,
